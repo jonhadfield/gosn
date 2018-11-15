@@ -75,25 +75,6 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 			err = fmt.Errorf("PutItems Failed: %v", err)
 			return
 		}
-		//createdItems = append(createdItems, newTag)
-	}
-	return
-}
-
-func _deleteItems(session Session, input []Item) (err error) {
-	var itemsToDelete []Item
-	for _, item := range input {
-		item.Deleted = true
-		itemsToDelete = append(itemsToDelete, item)
-	}
-	putItemsInput := PutItemsInput{
-		Session: session,
-		Items:   itemsToDelete,
-	}
-	_, err = PutItems(putItemsInput)
-	if err != nil {
-		err = fmt.Errorf("PutItems Failed: %v", err)
-		return
 	}
 	return
 }
@@ -326,7 +307,7 @@ func TestNoteTagging(t *testing.T) {
 		}
 	}
 
-	// delete notes and tags
+	// clean up
 	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
 		t.Errorf("failed to delete items")
 	}
@@ -376,8 +357,8 @@ func TestSearchNotesByText(t *testing.T) {
 		t.Errorf("expected one note but got: %d", len(foundItems))
 
 	}
-	// delete two notes
-	if dErr := _deleteAllTagsAndNotes(sOutput.Session); dErr != nil {
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
 		t.Errorf("failed to delete items")
 	}
 
@@ -426,8 +407,8 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 		t.Errorf("expected one note but got: %d", len(foundItems))
 
 	}
-	// delete two notes
-	if dErr := _deleteAllTagsAndNotes(sOutput.Session); dErr != nil {
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
 		t.Errorf("failed to delete items")
 	}
 
@@ -498,8 +479,9 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 		t.Errorf("failed to get created Item by UUID")
 	}
 
-	if deleteErr := _deleteItems(sOutput.Session, []Item{*newNote}); deleteErr != nil {
-		t.Errorf("failed to delete tags: %+v", deleteErr)
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+		t.Errorf("failed to delete items")
 	}
 }
 
@@ -540,9 +522,9 @@ func TestSearchTagsByText(t *testing.T) {
 		t.Errorf("expected one tag but got: %d", len(foundItems))
 
 	}
-	// delete two tags
-	if err = _deleteItems(sOutput.Session, foundItems); err != nil {
-		t.Errorf("failed to delete tags")
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+		t.Errorf("failed to delete items")
 	}
 
 }
@@ -584,9 +566,9 @@ func TestSearchTagsByRegex(t *testing.T) {
 		t.Errorf("expected one tag but got: %d", len(foundItems))
 
 	}
-	// delete two tags
-	if err = _deleteItems(sOutput.Session, foundItems); err != nil {
-		t.Errorf("failed to delete tags")
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+		t.Errorf("failed to delete items")
 	}
 
 }
@@ -641,9 +623,8 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 		t.Errorf("expected 200 items but got %d\n", len(retrievedNotes))
 	}
 
-	err = _deleteItems(sOutput.Session, newNotes)
-	if err != nil {
-		t.Error(err)
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+		t.Errorf("failed to delete items")
 	}
 
 }
