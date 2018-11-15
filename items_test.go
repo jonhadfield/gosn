@@ -75,7 +75,6 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 			err = fmt.Errorf("PutItems Failed: %v", err)
 			return
 		}
-		//createdItems = append(createdItems, newTag)
 	}
 	return
 }
