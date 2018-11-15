@@ -151,6 +151,81 @@ func createTag(title string) *Item {
 	return tag
 }
 
+func TestPutItemsAddSingleNote(t *testing.T) {
+	//SetDebugLogger(log.Println)
+	sOutput, err := SignIn(sInput)
+
+	if err != nil {
+		t.Errorf("SignIn Failed - err returned: %v", err)
+	}
+
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+		t.Errorf("failed to delete items")
+	}
+	newNoteContent := NoteContent{
+		Title:          "TestTitle",
+		Text:           testParagraph,
+		ItemReferences: nil,
+	}
+	newNoteContent.SetUpdateTime(time.Now())
+	newNote := NewItem()
+	newNote.ContentType = "Note"
+	createTime := time.Now().Format(timeLayout)
+	newNote.CreatedAt = createTime
+	newNote.UpdatedAt = createTime
+	newNote.Content = &newNoteContent
+	putItemsInput := PutItemsInput{
+		Items:   []Item{*newNote},
+		Session: sOutput.Session,
+	}
+	var putItemsOutput PutItemsOutput
+	putItemsOutput, err = PutItems(putItemsInput)
+	if err != nil {
+		t.Errorf("PutItems Failed - err returned: %v", err)
+	}
+	// ### confirm single item saved
+	numSaved := len(putItemsOutput.ResponseBody.SavedItems)
+	if numSaved != 1 {
+		t.Errorf("PutItems Failed - expected 1 item to be created but %d were", numSaved)
+	}
+	// ### retrieve items and check new item has been persisted
+	uuidOfNewItem := putItemsOutput.ResponseBody.SavedItems[0].UUID
+	getItemsInput := GetItemsInput{
+		Session: sOutput.Session,
+	}
+	var gio GetItemsOutput
+	gio, err = GetItems(getItemsInput)
+	if err != nil {
+		t.Errorf("failed to get items - err returned: %v", err)
+	}
+	var foundCreatedItem bool
+	for i := range gio.Items {
+		if gio.Items[i].UUID == uuidOfNewItem {
+			foundCreatedItem = true
+			if gio.Items[i].ContentType != "Note" {
+				t.Errorf("content type of new item is incorrect - expected: Note got: %s",
+					gio.Items[i].ContentType)
+			}
+			if gio.Items[i].Deleted {
+				t.Errorf("deleted status of new item is incorrect - expected: False got: True")
+			}
+			if gio.Items[i].Content.GetText() != testParagraph {
+				t.Errorf("text of new item is incorrect - expected: %s got: %s",
+					testParagraph, gio.Items[i].Content.GetText())
+			}
+		}
+	}
+	if !foundCreatedItem {
+		t.Errorf("failed to get created Item by UUID")
+	}
+
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+		t.Errorf("failed to delete items")
+	}
+}
+
 func TestNoteTagging(t *testing.T) {
 	// SetDebugLogger(log.Println)
 
@@ -412,77 +487,6 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 		t.Errorf("failed to delete items")
 	}
 
-}
-
-func TestPutItemsAddSingleNote(t *testing.T) {
-	//SetDebugLogger(log.Println)
-	sOutput, err := SignIn(sInput)
-
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
-
-	newNoteContent := NoteContent{
-		Title:          "TestTitle",
-		Text:           testParagraph,
-		ItemReferences: nil,
-	}
-	newNoteContent.SetUpdateTime(time.Now())
-	newNote := NewItem()
-	newNote.ContentType = "Note"
-	createTime := time.Now().Format(timeLayout)
-	newNote.CreatedAt = createTime
-	newNote.UpdatedAt = createTime
-	newNote.Content = &newNoteContent
-	putItemsInput := PutItemsInput{
-		Items:   []Item{*newNote},
-		Session: sOutput.Session,
-	}
-	var putItemsOutput PutItemsOutput
-	putItemsOutput, err = PutItems(putItemsInput)
-	if err != nil {
-		t.Errorf("PutItems Failed - err returned: %v", err)
-	}
-	// ### confirm single item saved
-	numSaved := len(putItemsOutput.ResponseBody.SavedItems)
-	if numSaved != 1 {
-		t.Errorf("PutItems Failed - expected 1 item to be created but %d were", numSaved)
-	}
-	// ### retrieve items and check new item has been persisted
-	uuidOfNewItem := putItemsOutput.ResponseBody.SavedItems[0].UUID
-	getItemsInput := GetItemsInput{
-		Session: sOutput.Session,
-	}
-	var gio GetItemsOutput
-	gio, err = GetItems(getItemsInput)
-	if err != nil {
-		t.Errorf("failed to get items - err returned: %v", err)
-	}
-	var foundCreatedItem bool
-	for i := range gio.Items {
-		if gio.Items[i].UUID == uuidOfNewItem {
-			foundCreatedItem = true
-			if gio.Items[i].ContentType != "Note" {
-				t.Errorf("content type of new item is incorrect - expected: Note got: %s",
-					gio.Items[i].ContentType)
-			}
-			if gio.Items[i].Deleted {
-				t.Errorf("deleted status of new item is incorrect - expected: False got: True")
-			}
-			if gio.Items[i].Content.GetText() != testParagraph {
-				t.Errorf("text of new item is incorrect - expected: %s got: %s",
-					testParagraph, gio.Items[i].Content.GetText())
-			}
-		}
-	}
-	if !foundCreatedItem {
-		t.Errorf("failed to get created Item by UUID")
-	}
-
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 }
 
 func TestSearchTagsByText(t *testing.T) {
