@@ -26,7 +26,6 @@ const (
 
 	// HTTP
 	MaxIdleConnections = 5  // HTTP transport limit
-	MaxConnsPerHost    = 5  // HTTP transport limit
 	RequestTimeout     = 60 // HTTP transport limit
 )
 
@@ -43,7 +42,6 @@ func createHTTPClient() *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConnsPerHost: MaxIdleConnections,
-			MaxConnsPerHost:     MaxConnsPerHost,
 			DisableKeepAlives:   false,
 		},
 		Timeout: time.Duration(RequestTimeout) * time.Second,
