@@ -179,7 +179,7 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	}
 
 	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+	if err = _deleteAllTagsAndNotes(sOutput.Session); err != nil {
 		t.Errorf("failed to delete items")
 	}
 	randPara := testParas[randInt(0, len(testParas))]
