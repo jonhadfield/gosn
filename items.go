@@ -155,13 +155,14 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 		if !inputItem.Deleted {
 			if stringInSlice(inputItem.ContentType, []string{"Tag", "Note"}, true) {
 				updatedTime, err = inputItem.Content.GetUpdateTime()
-				if inputItem.Content.GetTitle() == "" {
+				switch {
+				case inputItem.Content.GetTitle() == "":
 					err = fmt.Errorf("failed to create \"%s\" due to missing title: \"%s\"",
 						inputItem.ContentType, inputItem.UUID)
-				} else if updatedTime.IsZero() {
+				case updatedTime.IsZero():
 					err = fmt.Errorf("failed to create \"%s\" due to missing content updated time: \"%s\"",
 						inputItem.ContentType, inputItem.Content.GetTitle())
-				} else if inputItem.CreatedAt == "" {
+				case inputItem.CreatedAt == "":
 					err = fmt.Errorf("failed to create \"%s\" due to missing created at date: \"%s\"",
 						inputItem.ContentType, inputItem.Content.GetTitle())
 				}
