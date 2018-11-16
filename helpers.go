@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 )
 
 func stripLineBreak(input string) string {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Pallinder/go-randomdata"
+	randomdata "github.com/Pallinder/go-randomdata"
 )
 
 var (
