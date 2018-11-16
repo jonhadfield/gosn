@@ -99,6 +99,7 @@ type AppTagConfig struct {
 	Debug    bool
 }
 
+// GetItemsInput defines the input for retrieving items
 type GetItemsInput struct {
 	Session     Session
 	BatchSize   int // number of items to retrieve
@@ -111,7 +112,8 @@ type GetItemsInput struct {
 	PageSize    int // override default number of items to request with each sync call
 }
 
-// GetItemsOutput represents a slice of Standard Note items based on their state
+// GetItemsOutput defines the output from retrieving items
+// It contains slices of items based on their state
 // see: https://standardfile.org/ for state details
 type GetItemsOutput struct {
 	Items      []Item // items new or modified since last sync
@@ -135,12 +137,14 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	return
 }
 
+// PutItemsInput defines the input used to put items
 type PutItemsInput struct {
 	Items     []Item
 	SyncToken string
 	Session   Session
 }
 
+// PutItemsOutput defines the output from putting items
 type PutItemsOutput struct {
 	ResponseBody syncResponse
 }

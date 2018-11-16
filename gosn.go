@@ -25,8 +25,8 @@ const (
 	funcNameOutputEnd   = "]"    // suffix for outputting function name in log messages
 
 	// HTTP
-	MaxIdleConnections = 5  // HTTP transport limit
-	RequestTimeout     = 60 // HTTP transport limit
+	maxIdleConnections = 5  // HTTP transport limit
+	requestTimeout     = 60 // HTTP transport limit
 )
 
 var (
@@ -41,10 +41,10 @@ func init() {
 func createHTTPClient() *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
-			MaxIdleConnsPerHost: MaxIdleConnections,
+			MaxIdleConnsPerHost: maxIdleConnections,
 			DisableKeepAlives:   false,
 		},
-		Timeout: time.Duration(RequestTimeout) * time.Second,
+		Timeout: time.Duration(requestTimeout) * time.Second,
 	}
 
 	return client
