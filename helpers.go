@@ -25,7 +25,7 @@ func debugTrim(input string) string {
 }
 
 func GenUUID() string {
-	newUUID := uuid.Must(uuid.NewV4())
+	newUUID := uuid.NewV4()
 	return newUUID.String()
 }
 
