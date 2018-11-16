@@ -1,23 +1,26 @@
 language: go
 
 go:
-  - "1.10.x"
-  - "1.11.x"
-  - tip
-
-before_install:
-  - go get github.com/axw/gocov/gocov
-  - go get github.com/mattn/goveralls
-  - if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
-
-install:
-  - go get golang.org/x/crypto/pbkdf2
-  - go get github.com/satori/go.uuid
-  - go get github.com/Pallinder/go-randomdata
+  - 1.11.x
 
 os:
   - linux
+  - osx
+  - windows
+
+sudo: false
+
+before_install:
+- go get github.com/axw/gocov/gocov
+- go get github.com/mattn/goveralls
+- if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+
+install: true
+
+env:
+  - GO111MODULE=on
 
 script:
-  - base=$(echo $PWD | sed "s|$GOPATH/src/||") && go test -race -v $(go list ./... | grep -v vendor | sed "s|$base/|./|")
+  - go build
+  - go test
   - $GOPATH/bin/goveralls -service=travis-ci
