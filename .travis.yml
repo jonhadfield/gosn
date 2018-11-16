@@ -1,28 +1,47 @@
 language: go
 
 go:
-  - "1.10.x"
-  - "1.11.x"
+  - 1.10.x
+  - 1.11.x
   - tip
 
+os:
+  - linux
+  - osx
+
 sudo: false
-
-
-before_install:
-  - go get github.com/axw/gocov/gocov
-  - go get github.com/mattn/goveralls
-  - if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
 
 install: true
 
 env:
   - GO111MODULE=on
 
-os:
-  - linux
-  - osx
-
 script:
   - go build
   - go test
-  - $GOPATH/bin/goveralls -service=travis-ci
+#  - $GOPATH/bin/goveralls -service=travis-ci
+
+
+
+#
+#language: go
+#go:
+#- 1.10.x
+#- master
+#
+#os:
+#- linux
+#- osx
+#
+#dist: trusty
+#sudo: false
+#
+#install: true
+#
+#env:
+#- GO111MODULE=on
+#
+#before_install:
+#- go get github.com/axw/gocov/gocov
+#- go get github.com/mattn/goveralls
+#- if ! go get github.com/golang/tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
