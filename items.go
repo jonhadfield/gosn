@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// Describes an item
 type Item struct {
 	UUID        string
 	Content     ClientStructure
@@ -20,13 +21,28 @@ type Item struct {
 	ContentSize int
 }
 
-func NewItem() *Item {
+// Creates a new, typeless item
+func newItem() *Item {
 	now := time.Now().Format(timeLayout)
 	return &Item{
 		UUID:      GenUUID(),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
+}
+
+// Creates a new item of type Note
+func NewNote() *Item {
+	item := newItem()
+	item.ContentType = "Note"
+	return item
+}
+
+// Creates a new item of type Tag
+func NewTag() *Item {
+	item := newItem()
+	item.ContentType = "Tag"
+	return item
 }
 
 func NewNoteContent() *NoteContent {
