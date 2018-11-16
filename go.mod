@@ -1,6 +1,7 @@
 module github.com/jonhadfield/gosn
 
 require (
+	github.com/Pallinder/go-randomdata v1.1.0
 	github.com/davecheney/httpstat v1.0.0 // indirect
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect

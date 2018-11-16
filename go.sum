@@ -1,3 +1,5 @@
+github.com/Pallinder/go-randomdata v1.1.0 h1:gUubB1IEUliFmzjqjhf+bgkg1o6uoFIkRsP3VrhEcx8=
+github.com/Pallinder/go-randomdata v1.1.0/go.mod h1:yHmJgulpD2Nfrm0cR9tI/+oAgRqCQQixsA8HyRZfV9Y=
 github.com/davecheney/httpstat v1.0.0 h1:3o8oiYGB4AKsammYvME8tWywgLPTGUl6H75LTsKoO7w=
 github.com/davecheney/httpstat v1.0.0/go.mod h1:52l5gKMFknX/lFFUgv22IgZBDohnGoAoNJdtp3iNvyY=
 github.com/fatih/color v1.7.0 h1:DkWD4oS2D8LGGgTQ6IvwJJXSL5Vp2ffcQg58nFV38Ys=
