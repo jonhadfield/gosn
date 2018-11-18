@@ -3,7 +3,7 @@
 
 
 # about
-[Standard Notes](https://standardnotes.org/) is a service and application for the secure management and storage of notes.
+<a href="https://standardnotes.org/" target="_blank">Standard Notes</a> is a service and application for the secure management and storage of notes.
 gosn is a library to help develop your own application to manage notes on the official, or your self-hosted, Standard Notes server.
 
 # status
