@@ -149,13 +149,10 @@ type PutItemsOutput struct {
 	ResponseBody syncResponse
 }
 
-// PutItems validates and then syncs new and updated items to the API
-func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
-	funcName := funcNameOutputStart + "PutItems" + funcNameOutputEnd
-	debug(funcName, fmt.Errorf("putting items: %+v", input.Items))
-	debug(funcName, stripLineBreak(fmt.Sprintf("sync token: %+v", input.SyncToken)))
-	// TODO finish item validation
+func validateInput(input PutItemsInput) error {
 	var updatedTime time.Time
+	var err error
+	// TODO finish item validation
 	for _, inputItem := range input.Items {
 		// validate content if being added
 		if !inputItem.Deleted {
@@ -173,10 +170,22 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 						inputItem.ContentType, inputItem.Content.GetTitle())
 				}
 				if err != nil {
-					return
+					return err
 				}
 			}
 		}
+	}
+	return err
+}
+
+// PutItems validates and then syncs items via API
+func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
+	funcName := funcNameOutputStart + "PutItems" + funcNameOutputEnd
+	debug(funcName, fmt.Errorf("putting items: %+v", input.Items))
+	debug(funcName, stripLineBreak(fmt.Sprintf("sync token: %+v", input.SyncToken)))
+	err = validateInput(input)
+	if err != nil {
+		return
 	}
 
 	var encryptedItems []encryptedItem
