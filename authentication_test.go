@@ -1,7 +1,10 @@
 package gosn
 
 import (
+	"fmt"
+	"os"
 	"testing"
+	"time"
 )
 
 // ### server not required for following tests
@@ -44,4 +47,30 @@ func TestSignIn(t *testing.T) {
 		t.Errorf("SignIn Failed - token: %s mk: %s ak: %s",
 			sOutput.Session.Token, sOutput.Session.Mk, sOutput.Session.Ak)
 	}
+}
+
+func TestRegistration(t *testing.T) {
+	time.Now().Format("20060102150405")
+	emailAddr := fmt.Sprintf("testuser-%s@example.com", time.Now().Format("20060102150405"))
+	password := "secret"
+	rInput := RegisterInput{
+		Email:     emailAddr,
+		Password:  password,
+		APIServer: os.Getenv("SN_SERVER"),
+	}
+	_, err := rInput.Register()
+	if err != nil {
+		t.Errorf("registration failed: %+v\n", err)
+	}
+
+	sInput := SignInInput{
+		APIServer: os.Getenv("SN_SERVER"),
+		Email:     emailAddr,
+		Password:  password,
+	}
+	_, err = SignIn(sInput)
+	if err != nil {
+		t.Errorf("SignIn Failed - err returned: %v", err)
+	}
+
 }
