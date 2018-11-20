@@ -1,6 +1,5 @@
 # gosn
-[![Build Status](https://www.travis-ci.org/jonhadfield/gosn.svg?branch=master)](https://www.travis-ci.org/jonhadfield/gosn) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/jonhadfield/gosn/) [![Go Report Card](https://goreportcard.com/badge/github.com/jonhadfield/gosn)](https://goreportcard.com/report/github.com/jonhadfield/gosn) [![Coverage Status](https://coveralls.io/repos/github/jonhadfield/gosn/badge.svg?branch=master)](https://coveralls.io/github/jonhadfield/gosn?branch=master) 
-
+[![Build Status](https://www.travis-ci.org/jonhadfield/gosn.svg?branch=master)](https://www.travis-ci.org/jonhadfield/gosn) [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/jonhadfield/gosn/) [![Go Report Card](https://goreportcard.com/badge/github.com/jonhadfield/gosn)](https://goreportcard.com/report/github.com/jonhadfield/gosn) 
 
 # about
 <a href="https://standardnotes.org/" target="_blank">Standard Notes</a> is a service and application for the secure management and storage of notes.  
@@ -14,6 +13,11 @@ A work in progress with more tests to be written and bugs to be fixed. Please cr
 # installation
 
 Using go get: ``` go get github.com/jonhadfield/gosn```
+
+# documentation
+
+- [guides](docs/index.md)
+- [go docs](https://godoc.org/github.com/jonhadfield/gosn)
 
 # basic usage
 ## authenticating
@@ -36,27 +40,26 @@ This will return a session containing the necessary secrets and information to m
     input := GetItemsInput{
         Session: sOut.Session,
     }
-    
-    output, _ = GetItems(input)
+    gio, _ := GetItems(input)
 ```
 
 ## creating a note
 
 ```golang
-    # define note content
+    # create note content
     content := NoteContent{
         Title:          "Note Title",
         Text:           "Note Text",
     }
-    # define note
+    # create note
     note := NewNote()
     note.Content = content
     
-    # create note
+    # sync note
     pii := PutItemsInput{
     		Session: sOut.Session,
     		Items:   []gosn.Notes{note},
     }
-    _, _ = PutItems(pii)
+    pio, _ := PutItems(pii)
 ```
 
