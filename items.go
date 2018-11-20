@@ -102,13 +102,10 @@ type AppTagConfig struct {
 // GetItemsInput defines the input for retrieving items
 type GetItemsInput struct {
 	Session     Session
-	BatchSize   int // number of items to retrieve
 	SyncToken   string
 	CursorToken string
-	Token       string
-	Ak          string
-	Mk          string
 	Filters     ItemFilters
+	BatchSize   int // number of items to retrieve
 	PageSize    int // override default number of items to request with each sync call
 }
 
