@@ -73,9 +73,6 @@ func randInt(min int, max int) int {
 func _createNotes(session Session, input map[string]string) (output PutItemsOutput, err error) {
 	for k, v := range input {
 		newNote := NewNote()
-		createTime := time.Now().Format(timeLayout)
-		newNote.CreatedAt = createTime
-		newNote.UpdatedAt = createTime
 		newNoteContent := &NoteContent{
 			Title: k,
 			Text:  v,
@@ -99,9 +96,6 @@ func _createNotes(session Session, input map[string]string) (output PutItemsOutp
 func _createTags(session Session, input []string) (output PutItemsOutput, err error) {
 	for _, tt := range input {
 		newTag := NewTag()
-		createTime := time.Now().Format(timeLayout)
-		newTag.CreatedAt = createTime
-		newTag.UpdatedAt = createTime
 		newTagContent := &NoteContent{
 			Title: tt,
 		}
@@ -212,9 +206,6 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	}
 	newNoteContent.SetUpdateTime(time.Now())
 	newNote := NewNote()
-	createTime := time.Now().Format(timeLayout)
-	newNote.CreatedAt = createTime
-	newNote.UpdatedAt = createTime
 	newNote.Content = &newNoteContent
 	putItemsInput := PutItemsInput{
 		Items:   []Item{*newNote},
@@ -266,8 +257,6 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 		t.Errorf("failed to delete items")
 	}
 }
-
-
 
 func TestNoteTagging(t *testing.T) {
 	// SetDebugLogger(log.Println)
