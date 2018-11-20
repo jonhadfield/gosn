@@ -17,7 +17,7 @@ func TestFilterNoteTitle(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if ! res {
+	if !res {
 		t.Error("failed to match note by title")
 	}
 }
@@ -35,7 +35,7 @@ func TestFilterTagTitle(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyTagFilters(*gnuTag, itemFilters)
-	if ! res {
+	if !res {
 		t.Error("failed to match tag by title")
 	}
 }
@@ -53,7 +53,7 @@ func TestFilterNoteText(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyTagFilters(*gnuNote, itemFilters)
-	if ! res {
+	if !res {
 		t.Error("failed to match note by text")
 	}
 }
@@ -71,7 +71,7 @@ func TestFilterNoteTextByRegex(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyTagFilters(*gnuNote, itemFilters)
-	if ! res {
+	if !res {
 		t.Error("failed to match note by text regex")
 	}
 }
