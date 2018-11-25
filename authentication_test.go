@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // ### server not required for following tests
@@ -40,9 +42,8 @@ func TestGenerateEncryptedPasswordWithInvalidPasswordCostForVersion003(t *testin
 func TestSignIn(t *testing.T) {
 
 	sOutput, err := SignIn(sInput)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
+	assert.NoError(t, err, "sign-in failed", err)
+
 	if sOutput.Session.Token == "" || sOutput.Session.Mk == "" || sOutput.Session.Ak == "" {
 		t.Errorf("SignIn Failed - token: %s mk: %s ak: %s",
 			sOutput.Session.Token, sOutput.Session.Mk, sOutput.Session.Ak)

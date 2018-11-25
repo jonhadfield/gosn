@@ -3,6 +3,8 @@ package gosn
 import (
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEncryptString003(t *testing.T) {
@@ -14,14 +16,8 @@ func TestEncryptString003(t *testing.T) {
 	expectedCipher := "003:6d6c7ee899ba8aafa909bf7a13493cf0acad54eaba3963f82ffb4ff15cdd321e:fa9d5b81-7b2d-4d9b-988d-db09cee3f9ec:b57e5a6338f9b1690ed79a4b3e5642e3:5+mzQl3fkiMvJnuu/7nV4mCnJ6bHOn2LJEUHt+TO4vK4s4X3GNly+OAsiycJQ1B72Z+rkWB+TK6YRyiXMoVpDh9R1i+78ZH2wCCzIVZDcihIvY4kzFdr8UuAe7y0nl2GKVAfJv0y+2khZf7/3cwic2HYlwPXEnMdRQWC4vvGh8a0MkBI08uShLF7cmYdhjsBG8DIduh3GSGy8PtY2+iMj+Y6zMbCcHXTZcARuMi+ReNDDY6mnfw6PV0i+FQGj6VE1jQRkhBhKZE4NgL1H79xtKFAwkrWU9Cv2EcFJE0JGHyJV4xvMbFwzFXhcC6xE8aBD7tZ7NhDE+Il1kBIli5QdQ=="
 
 	result, err := encryptString(stringToEncrypt, encryptionKey, authKey, uuid, IV)
-	if err != nil {
-		t.Errorf("unexpected error: %+v", err)
-	}
-	if result != expectedCipher {
-		fmt.Println("w:", expectedCipher)
-		fmt.Println("g:", result)
-		t.Errorf("unexpected result: %s", result)
-	}
+	assert.Nil(t, err, err)
+	assert.Equal(t, result, expectedCipher, fmt.Sprintf("expected: %s res: %s", expectedCipher, result))
 }
 
 func TestDecryptString003(t *testing.T) {
@@ -32,12 +28,6 @@ func TestDecryptString003(t *testing.T) {
 	expectedText := `{"title":"tagOne","references":[{"uuid":"a5bd62b0-609c-4152-88f9-9d55f5f490f7","content_type":"Note"},{"uuid":"d19be4ac-3cf4-47b9-986f-26d67e9e2b83","content_type":"Note"},{"uuid":"44cc3bc4-c0e9-11e8-86d5-acde48001122","content_type":"Note"}]}`
 
 	result, err := decryptString(stringToDecrypt, encryptionKey, authKey, uuid)
-	if err != nil {
-		t.Errorf("unexpected error: %+v", err)
-	}
-	if result != expectedText {
-		fmt.Println("w:", expectedText)
-		fmt.Println("g:", result)
-		t.Errorf("unexpected result: %s", result)
-	}
+	assert.Nil(t, err, err)
+	assert.Equal(t, result, expectedText, fmt.Sprintf("expected: %s res: %s", expectedText, result))
 }
