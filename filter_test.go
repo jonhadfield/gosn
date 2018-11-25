@@ -21,6 +21,25 @@ func TestFilterNoteTitle(t *testing.T) {
 		t.Error("failed to match note by title")
 	}
 }
+
+func TestFilterNoteTitleContains(t *testing.T) {
+	gnuNote := createNote("GNU", "Is not Unix")
+	filter := Filter{
+		Type:       "Note",
+		Key:        "Title",
+		Comparison: "contains",
+		Value:      "N",
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyNoteFilters(*gnuNote, itemFilters, nil)
+	if !res {
+		t.Error("failed to match note by title contains")
+	}
+}
+
 func TestFilterNoteText(t *testing.T) {
 	gnuNote := createNote("GNU", "Is not Unix")
 	filter := Filter{
@@ -36,6 +55,42 @@ func TestFilterNoteText(t *testing.T) {
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
 	if !res {
 		t.Error("failed to match note by text")
+	}
+}
+
+func TestFilterNoteTextContains(t *testing.T) {
+	gnuNote := createNote("GNU", "Is not Unix")
+	filter := Filter{
+		Type:       "Note",
+		Key:        "Text",
+		Comparison: "contains",
+		Value:      "Unix",
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyNoteFilters(*gnuNote, itemFilters, nil)
+	if !res {
+		t.Error("failed to match note by title contains")
+	}
+}
+
+func TestFilterNoteTextNotEqualTo(t *testing.T) {
+	gnuNote := createNote("GNU", "Is not Unix")
+	filter := Filter{
+		Type:       "Note",
+		Key:        "Text",
+		Comparison: "!=",
+		Value:      "Potato",
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyNoteFilters(*gnuNote, itemFilters, nil)
+	if !res {
+		t.Error("failed to match note by negative text match")
 	}
 }
 
