@@ -1,6 +1,7 @@
 package gosn
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -17,9 +18,7 @@ func TestFilterNoteTitle(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if !res {
-		t.Error("failed to match note by title")
-	}
+	assert.True(t, res, "failed to match note by title")
 }
 
 func TestFilterNoteTitleContains(t *testing.T) {
@@ -35,9 +34,7 @@ func TestFilterNoteTitleContains(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if !res {
-		t.Error("failed to match note by title contains")
-	}
+	assert.True(t, res, "failed to match note by title contains")
 }
 
 func TestFilterNoteText(t *testing.T) {
@@ -53,9 +50,7 @@ func TestFilterNoteText(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if !res {
-		t.Error("failed to match note by text")
-	}
+	assert.True(t, res, "failed to match note by text")
 }
 
 func TestFilterNoteTextContains(t *testing.T) {
@@ -71,9 +66,7 @@ func TestFilterNoteTextContains(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if !res {
-		t.Error("failed to match note by title contains")
-	}
+	assert.True(t, res, "failed to match note by title contains")
 }
 
 func TestFilterNoteTitleNotEqualTo(t *testing.T) {
@@ -89,9 +82,7 @@ func TestFilterNoteTitleNotEqualTo(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if !res {
-		t.Error("failed to match note by negative title match")
-	}
+	assert.True(t, res, "failed to match note by negative title match")
 }
 
 func TestFilterNoteTextNotEqualTo(t *testing.T) {
@@ -107,9 +98,7 @@ func TestFilterNoteTextNotEqualTo(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if !res {
-		t.Error("failed to match note by negative text match")
-	}
+	assert.True(t, res, "failed to match note by negative text match")
 }
 
 func TestFilterNoteTextByRegex(t *testing.T) {
@@ -125,9 +114,7 @@ func TestFilterNoteTextByRegex(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, nil)
-	if !res {
-		t.Error("failed to match note by text regex")
-	}
+	assert.True(t, res, "failed to match note by text regex")
 }
 
 func TestFilterNoteTitleByRegex(t *testing.T) {
@@ -143,10 +130,9 @@ func TestFilterNoteTitleByRegex(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyTagFilters(*gnuNote, itemFilters)
-	if !res {
-		t.Error("failed to match note by ttitleext regex")
-	}
+	assert.True(t, res, "failed to match note by title text regex")
 }
+
 func TestFilterTagTitle(t *testing.T) {
 	gnuTag := createTag("GNU")
 	filter := Filter{
@@ -160,10 +146,9 @@ func TestFilterTagTitle(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyTagFilters(*gnuTag, itemFilters)
-	if !res {
-		t.Error("failed to match tag by title")
-	}
+	assert.True(t, res, "failed to match tag by title")
 }
+
 func TestFilterTagTitleByRegex(t *testing.T) {
 	gnuTag := createTag("GNU")
 	filter := Filter{
@@ -177,9 +162,7 @@ func TestFilterTagTitleByRegex(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyTagFilters(*gnuTag, itemFilters)
-	if !res {
-		t.Error("failed to match tag by title regex")
-	}
+	assert.True(t, res, "failed to match tag by title regex")
 }
 
 func TestFilterTagTitleByNotEqualTo(t *testing.T) {
@@ -195,7 +178,5 @@ func TestFilterTagTitleByNotEqualTo(t *testing.T) {
 		MatchAny: true,
 	}
 	res := applyTagFilters(*gnuTag, itemFilters)
-	if !res {
-		t.Error("failed to match tag by title negative title match")
-	}
+	assert.True(t, res, "failed to match tag by title negative title match")
 }
