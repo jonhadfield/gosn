@@ -1,8 +1,9 @@
 package gosn
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFilterNoteTitle(t *testing.T) {

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -187,15 +189,9 @@ func createTag(title string) *Item {
 func TestPutItemsAddSingleNote(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
+	assert.NoError(t, err, "sign-in failed", err)
+	assert.NoError(t, _deleteAllTagsAndNotes(sOutput.Session), "failed to delete items")
 
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
-
-	// clean up
-	if err = _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 	randPara := testParas[randInt(0, len(testParas))]
 
 	newNoteContent := NoteContent{
@@ -212,24 +208,15 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	}
 	var putItemsOutput PutItemsOutput
 	putItemsOutput, err = PutItems(putItemsInput)
-	if err != nil {
-		t.Errorf("PutItems Failed - err returned: %v", err)
-	}
-	// ### confirm single item saved
-	numSaved := len(putItemsOutput.ResponseBody.SavedItems)
-	if numSaved != 1 {
-		t.Errorf("PutItems Failed - expected 1 item to be created but %d were", numSaved)
-	}
-	// ### retrieve items and check new item has been persisted
+	assert.NoError(t, err, "PutItems Failed", err)
+	assert.Len(t, putItemsOutput.ResponseBody.SavedItems, 1, "expected 1")
 	uuidOfNewItem := putItemsOutput.ResponseBody.SavedItems[0].UUID
 	getItemsInput := GetItemsInput{
 		Session: sOutput.Session,
 	}
 	var gio GetItemsOutput
 	gio, err = GetItems(getItemsInput)
-	if err != nil {
-		t.Errorf("failed to get items - err returned: %v", err)
-	}
+	assert.NoError(t, err, "failed to get items")
 	var foundCreatedItem bool
 	for i := range gio.Items {
 		if gio.Items[i].UUID == uuidOfNewItem {
@@ -261,15 +248,10 @@ func TestNoteTagging(t *testing.T) {
 	// SetDebugLogger(log.Println)
 
 	sOutput, err := SignIn(sInput)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
+	assert.NoError(t, err, "sign-in failed", err)
 
 	// create base notes
 	newNotes := genNotes(100, 2)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
 	pii := PutItemsInput{
 		Session: sOutput.Session,
 		Items:   newNotes,
@@ -422,9 +404,7 @@ func TestNoteTagging(t *testing.T) {
 func TestSearchNotesByUUID(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
+	assert.NoError(t, err, "sign-in failed", err)
 	// create two notes
 	noteInput := map[string]string{
 		"Cheese Fact": "Cheese is not a vegetable",
@@ -482,9 +462,8 @@ func TestSearchNotesByUUID(t *testing.T) {
 func TestSearchNotesByText(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
+	assert.NoError(t, err, "sign-in failed", err)
+
 	// create two notes
 	noteInput := map[string]string{
 		"Dog Fact":    "Dogs can't look up",
@@ -532,9 +511,8 @@ func TestSearchNotesByText(t *testing.T) {
 func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
+	assert.NoError(t, err, "sign-in failed", err)
+
 	// create two notes
 	noteInput := map[string]string{
 		"Dog Fact":    "Dogs can't look up",
@@ -581,12 +559,10 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 
 func TestSearchTagsByText(t *testing.T) {
 	//SetDebugLogger(log.Println)
-	sOutput, signInErr := SignIn(sInput)
-	if signInErr != nil {
-		t.Errorf("SignIn Failed - err returned: %v", signInErr)
-	}
+	sOutput, err := SignIn(sInput)
+	assert.NoError(t, err, "sign-in failed", err)
+
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
-	var err error
 	if _, err = _createTags(sOutput.Session, tagInput); err != nil {
 		t.Errorf("failed to create tags")
 	}
@@ -625,12 +601,10 @@ func TestSearchTagsByText(t *testing.T) {
 
 func TestSearchTagsByRegex(t *testing.T) {
 	//SetDebugLogger(log.Println)
-	sOutput, signInErr := SignIn(sInput)
-	if signInErr != nil {
-		t.Errorf("SignIn Failed - err returned: %v", signInErr)
-	}
+	sOutput, err := SignIn(sInput)
+	assert.NoError(t, err, "sign-in failed", err)
+
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
-	var err error
 	if _, err = _createTags(sOutput.Session, tagInput); err != nil {
 		t.Errorf("failed to create tags")
 	}
@@ -668,11 +642,9 @@ func TestSearchTagsByRegex(t *testing.T) {
 }
 
 func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
-	newNotes := genNotes(200, 2)
 	sOutput, err := SignIn(sInput)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
+	assert.NoError(t, err, "sign-in failed", err)
+	newNotes := genNotes(200, 2)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
 		Items:   newNotes,
