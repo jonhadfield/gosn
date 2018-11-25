@@ -37,7 +37,7 @@ func NewNote() *Item {
 	return item
 }
 
-// NewNTag returns an Item of type Tag without content
+// NewTag returns an Item of type Tag without content
 func NewTag() *Item {
 	item := newItem()
 	item.ContentType = "Tag"
