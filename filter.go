@@ -114,7 +114,7 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						matchedAll = false
 					}
 				case "==":
-					if item.Content.GetTitle() == filter.Value {
+					if item.Content.GetText() == filter.Value {
 						if itemFilters.MatchAny {
 							return true
 						}
@@ -123,7 +123,7 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						matchedAll = false
 					}
 				case "!=":
-					if item.Content.GetTitle() != filter.Value {
+					if item.Content.GetText() != filter.Value {
 						if itemFilters.MatchAny {
 							return true
 						}

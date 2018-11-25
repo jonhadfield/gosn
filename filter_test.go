@@ -21,29 +21,10 @@ func TestFilterNoteTitle(t *testing.T) {
 		t.Error("failed to match note by title")
 	}
 }
-
-func TestFilterTagTitle(t *testing.T) {
-	gnuTag := createTag("GNU")
-	filter := Filter{
-		Type:       "Tag",
-		Key:        "Title",
-		Comparison: "==",
-		Value:      "GNU",
-	}
-	itemFilters := ItemFilters{
-		Filters:  []Filter{filter},
-		MatchAny: true,
-	}
-	res := applyTagFilters(*gnuTag, itemFilters)
-	if !res {
-		t.Error("failed to match tag by title")
-	}
-}
-
 func TestFilterNoteText(t *testing.T) {
 	gnuNote := createNote("GNU", "Is not Unix")
 	filter := Filter{
-		Type:       "Tag",
+		Type:       "Note",
 		Key:        "Text",
 		Comparison: "==",
 		Value:      "Is not Unix",
@@ -52,7 +33,7 @@ func TestFilterNoteText(t *testing.T) {
 		Filters:  []Filter{filter},
 		MatchAny: true,
 	}
-	res := applyTagFilters(*gnuNote, itemFilters)
+	res := applyNoteFilters(*gnuNote, itemFilters, nil)
 	if !res {
 		t.Error("failed to match note by text")
 	}
@@ -73,5 +54,57 @@ func TestFilterNoteTextByRegex(t *testing.T) {
 	res := applyTagFilters(*gnuNote, itemFilters)
 	if !res {
 		t.Error("failed to match note by text regex")
+	}
+}
+
+func TestFilterNoteTitleByRegex(t *testing.T) {
+	gnuNote := createNote("GNU", "Is not Unix")
+	filter := Filter{
+		Type:       "Tag",
+		Key:        "Title",
+		Comparison: "~",
+		Value:      "^.N.$",
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyTagFilters(*gnuNote, itemFilters)
+	if !res {
+		t.Error("failed to match note by ttitleext regex")
+	}
+}
+func TestFilterTagTitle(t *testing.T) {
+	gnuTag := createTag("GNU")
+	filter := Filter{
+		Type:       "Tag",
+		Key:        "Title",
+		Comparison: "==",
+		Value:      "GNU",
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyTagFilters(*gnuTag, itemFilters)
+	if !res {
+		t.Error("failed to match tag by title")
+	}
+}
+func TestFilterTagTitleByRegex(t *testing.T) {
+	gnuTag := createTag("GNU")
+	filter := Filter{
+		Type:       "Tag",
+		Key:        "Title",
+		Comparison: "~",
+		Value:      "^.*U$",
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyTagFilters(*gnuTag, itemFilters)
+	if !res {
+		t.Error("failed to match tag by title regex")
 	}
 }
