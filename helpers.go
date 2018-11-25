@@ -17,13 +17,6 @@ func stripLineBreak(input string) string {
 	return input
 }
 
-func debugTrim(input string) string {
-	if len(input) > maxDebugChars {
-		return input[:maxDebugChars-3] + "..."
-	}
-	return input
-}
-
 func GenUUID() string {
 	newUUID := uuid.NewV4()
 	return newUUID.String()

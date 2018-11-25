@@ -71,24 +71,28 @@ func randInt(min int, max int) int {
 	return min + rand.Intn(max-min)
 }
 func _createNotes(session Session, input map[string]string) (output PutItemsOutput, err error) {
+	var newNotes []Item
 	for k, v := range input {
 		newNote := NewNote()
-		newNoteContent := &NoteContent{
-			Title: k,
-			Text:  v,
-		}
-		newNoteContent.SetUpdateTime(time.Now())
+		newNoteContent := NewNoteContent()
+		//newNoteContent := &NoteContent{
+		//	Title: k,
+		//	Text:  v,
+		//}
+		newNoteContent.Title = k
+		newNoteContent.Text = v
+		//newNoteContent.SetUpdateTime(time.Now())
 		newNote.Content = newNoteContent
-
-		putItemsInput := PutItemsInput{
-			Session: session,
-			Items:   []Item{*newNote},
-		}
-		output, err = PutItems(putItemsInput)
-		if err != nil {
-			err = fmt.Errorf("PutItems Failed: %v", err)
-			return
-		}
+		newNotes = append(newNotes, *newNote)
+	}
+	putItemsInput := PutItemsInput{
+		Session: session,
+		Items:   newNotes,
+	}
+	output, err = PutItems(putItemsInput)
+	if err != nil {
+		err = fmt.Errorf("PutItems Failed: %v", err)
+		return
 	}
 	return
 }
@@ -414,6 +418,66 @@ func TestNoteTagging(t *testing.T) {
 		}
 	}
 
+	// clean up
+	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
+		t.Errorf("failed to delete items")
+	}
+
+}
+
+func TestSearchNotesByUUID(t *testing.T) {
+	//SetDebugLogger(log.Println)
+	sOutput, err := SignIn(sInput)
+	if err != nil {
+		t.Errorf("SignIn Failed - err returned: %v", err)
+	}
+	// create two notes
+	noteInput := map[string]string{
+		"Cheese Fact": "Cheese is not a vegetable",
+		"Dog Fact":    "Dogs can't look up",
+		"GNU":         "Is Not Unix",
+	}
+	var cnO PutItemsOutput
+	if cnO, err = _createNotes(sOutput.Session, noteInput); err != nil {
+		t.Errorf("failed to create notes")
+	}
+	var dogFactUUID string
+	_, dis, _, err := decryptItems(cnO.ResponseBody, sOutput.Session.Mk, sOutput.Session.Ak)
+
+	idb, _ := processDecryptedItems(dis)
+	for _, di := range idb {
+		if di.Content.GetTitle() == "Dog Fact" {
+			dogFactUUID = di.UUID
+		}
+	}
+	var foundItems []Item
+	filterOne := Filter{
+		Type:  "Note",
+		Key:   "UUID",
+		Value: dogFactUUID,
+	}
+	var itemFilters ItemFilters
+	itemFilters.Filters = []Filter{filterOne}
+	foundItems, err = _getItems(sOutput.Session, itemFilters)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	// check correct items returned
+	switch len(foundItems) {
+	case 0:
+		t.Errorf("no notes returned")
+	case 1:
+		if foundItems[0].Content.GetTitle() != "Dog Fact" {
+			t.Errorf("incorrect note returned (title mismatch)")
+		}
+		if !foundItems[0].Content.TextContains("Dogs can't look up", true) {
+			t.Errorf("incorrect note returned (text mismatch)")
+		}
+	default:
+		t.Errorf("expected one note but got: %d", len(foundItems))
+
+	}
 	// clean up
 	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
 		t.Errorf("failed to delete items")
