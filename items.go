@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -61,11 +60,6 @@ func NewTagContent() *TagContent {
 
 // ClientStructure defines behaviour of an Item's content entry
 type ClientStructure interface {
-	// check if title contains string
-	TitleContains(input string, matchCase bool) bool
-	// check if text contains string
-	TextContains(input string, matchCase bool) bool
-	// return item references
 	References() []ItemReference
 	// update or insert item references
 	UpsertReferences(input []ItemReference)
@@ -532,36 +526,6 @@ func (input *TagContent) SetUpdateTime(uTime time.Time) {
 	input.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
 }
 
-func (input NoteContent) TextContains(findString string, matchCase bool) bool {
-	if matchCase && strings.Contains(input.Text, findString) {
-		return true
-	}
-	if !matchCase && strings.Contains(strings.ToLower(input.Text), strings.ToLower(findString)) {
-		return true
-	}
-	return false
-}
-
-func (input NoteContent) TitleContains(findString string, matchCase bool) bool {
-	if matchCase && strings.Contains(input.Title, findString) {
-		return true
-	}
-	if !matchCase && strings.Contains(strings.ToLower(input.Title), strings.ToLower(findString)) {
-		return true
-	}
-	return false
-}
-
-func (input NoteContent) TitleIs(findString string, matchCase bool) bool {
-	if matchCase && input.Title == findString {
-		return true
-	}
-	if !matchCase && strings.ToLower(input.Title) == strings.ToLower(findString) {
-		return true
-	}
-	return false
-}
-
 func (input NoteContent) GetTitle() string {
 	return input.Title
 }
@@ -590,16 +554,6 @@ func (input TagContent) TextContains(findString string, matchCase bool) bool {
 
 func (input TagContent) GetTitle() string {
 	return input.Title
-}
-
-func (input TagContent) TitleContains(findString string, matchCase bool) bool {
-	if matchCase && strings.Contains(input.Title, findString) {
-		return true
-	}
-	if !matchCase && strings.Contains(strings.ToLower(input.Title), strings.ToLower(findString)) {
-		return true
-	}
-	return false
 }
 
 func (input TagContent) References() []ItemReference {

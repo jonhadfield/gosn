@@ -75,13 +75,8 @@ func _createNotes(session Session, input map[string]string) (output PutItemsOutp
 	for k, v := range input {
 		newNote := NewNote()
 		newNoteContent := NewNoteContent()
-		//newNoteContent := &NoteContent{
-		//	Title: k,
-		//	Text:  v,
-		//}
 		newNoteContent.Title = k
 		newNoteContent.Text = v
-		//newNoteContent.SetUpdateTime(time.Now())
 		newNote.Content = newNoteContent
 		newNotes = append(newNotes, *newNote)
 	}
@@ -318,7 +313,6 @@ func TestNoteTagging(t *testing.T) {
 	}
 	updatedFoodTagsOutput := UpdateItemRefs(updatedFoodTagsInput)
 
-	//
 	for _, at := range updatedAnimalTagsOutput.Items {
 		for _, ref := range at.Content.References() {
 			if !stringInSlice(ref.UUID, animalNoteUUIDs, true) {
@@ -471,7 +465,7 @@ func TestSearchNotesByUUID(t *testing.T) {
 		if foundItems[0].Content.GetTitle() != "Dog Fact" {
 			t.Errorf("incorrect note returned (title mismatch)")
 		}
-		if !foundItems[0].Content.TextContains("Dogs can't look up", true) {
+		if !strings.Contains(foundItems[0].Content.GetText(), "Dogs can't look up") {
 			t.Errorf("incorrect note returned (text mismatch)")
 		}
 	default:
@@ -521,7 +515,7 @@ func TestSearchNotesByText(t *testing.T) {
 		if foundItems[0].Content.GetTitle() != "Cheese Fact" {
 			t.Errorf("incorrect note returned (title mismatch)")
 		}
-		if !foundItems[0].Content.TextContains("Cheese is not a vegetable", true) {
+		if !strings.Contains(foundItems[0].Content.GetText(), "Cheese is not a vegetable") {
 			t.Errorf("incorrect note returned (text mismatch)")
 		}
 	default:
@@ -571,7 +565,7 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 		if foundItems[0].Content.GetTitle() != "Dog Fact" {
 			t.Errorf("incorrect note returned (title mismatch)")
 		}
-		if !foundItems[0].Content.TextContains("Dogs can't look up", true) {
+		if !strings.Contains(foundItems[0].Content.GetText(), "Dogs can't look up") {
 			t.Errorf("incorrect note returned (text mismatch)")
 		}
 	default:
