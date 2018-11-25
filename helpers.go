@@ -24,16 +24,11 @@ func GenUUID() string {
 
 func stringInSlice(inStr string, inSlice []string, matchCase bool) bool {
 	for i := range inSlice {
-		if matchCase {
-			if strings.ToLower(inStr) == strings.ToLower(inSlice[i]) {
-				return true
-			}
-		} else {
-			if inStr == inSlice[i] {
-				return true
-			}
+		if matchCase && inStr == inSlice[i] {
+			return true
+		} else if strings.ToLower(inStr) == strings.ToLower(inSlice[i]) {
+			return true
 		}
-
 	}
 	return false
 }
