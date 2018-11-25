@@ -80,7 +80,7 @@ func TestFilterNoteTitleNotEqualTo(t *testing.T) {
 	gnuNote := createNote("GNU", "Is not Unix")
 	filter := Filter{
 		Type:       "Note",
-		Key:        "Text",
+		Key:        "Title",
 		Comparison: "!=",
 		Value:      "Potato",
 	}
@@ -115,7 +115,7 @@ func TestFilterNoteTextNotEqualTo(t *testing.T) {
 func TestFilterNoteTextByRegex(t *testing.T) {
 	gnuNote := createNote("GNU", "Is not Unix")
 	filter := Filter{
-		Type:       "Tag",
+		Type:       "Note",
 		Key:        "Text",
 		Comparison: "~",
 		Value:      "^.*Unix",
@@ -124,7 +124,7 @@ func TestFilterNoteTextByRegex(t *testing.T) {
 		Filters:  []Filter{filter},
 		MatchAny: true,
 	}
-	res := applyTagFilters(*gnuNote, itemFilters)
+	res := applyNoteFilters(*gnuNote, itemFilters, nil)
 	if !res {
 		t.Error("failed to match note by text regex")
 	}
@@ -182,7 +182,7 @@ func TestFilterTagTitleByRegex(t *testing.T) {
 	}
 }
 
-func TestFilterTagTitleByNegativeTitleMatch(t *testing.T) {
+func TestFilterTagTitleByNotEqualTo(t *testing.T) {
 	gnuTag := createTag("GNU")
 	filter := Filter{
 		Type:       "Tag",
