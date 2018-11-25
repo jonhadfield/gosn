@@ -19,9 +19,7 @@ func TestGenerateEncryptedPasswordWithValidInput(t *testing.T) {
 	testInput.Version = "003"
 	testInput.PasswordSalt = ""
 	result, _, _, _ := generateEncryptedPasswordAndKeys(testInput)
-	if result != "1312fe421aa49a6444684b58cbd5a43a55638cd5bf77514c78d50c7f3ae9c4e7" {
-		t.Errorf("failed password generation")
-	}
+	assert.Equal(t, result, "1312fe421aa49a6444684b58cbd5a43a55638cd5bf77514c78d50c7f3ae9c4e7")
 }
 
 func TestGenerateEncryptedPasswordWithInvalidPasswordCostForVersion003(t *testing.T) {
@@ -33,14 +31,11 @@ func TestGenerateEncryptedPasswordWithInvalidPasswordCostForVersion003(t *testin
 	testInput.Version = "003"
 	testInput.PasswordSalt = ""
 	_, _, _, err := generateEncryptedPasswordAndKeys(testInput)
-	if err == nil {
-		t.Errorf("version 003 requires password cost of at least 100000")
-	}
+	assert.Error(t, err)
 }
 
-// ### server required for following tests
+// server required for following tests
 func TestSignIn(t *testing.T) {
-
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
 
@@ -60,18 +55,13 @@ func TestRegistration(t *testing.T) {
 		APIServer: os.Getenv("SN_SERVER"),
 	}
 	_, err := rInput.Register()
-	if err != nil {
-		t.Errorf("registration failed: %+v\n", err)
-	}
+	assert.NoError(t, err, "registration failed")
 
-	sInput := SignInInput{
+	postRegSignInInput := SignInInput{
 		APIServer: os.Getenv("SN_SERVER"),
 		Email:     emailAddr,
 		Password:  password,
 	}
-	_, err = SignIn(sInput)
-	if err != nil {
-		t.Errorf("SignIn Failed - err returned: %v", err)
-	}
-
+	_, err = SignIn(postRegSignInInput)
+	assert.NoError(t, err, err)
 }

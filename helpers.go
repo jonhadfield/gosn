@@ -17,6 +17,7 @@ func stripLineBreak(input string) string {
 	return input
 }
 
+// GenUUID generates a unique identifer required when creating a new item
 func GenUUID() string {
 	newUUID := uuid.NewV4()
 	return newUUID.String()
