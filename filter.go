@@ -16,7 +16,6 @@ type Filter struct {
 	Key        string
 	Comparison string
 	Value      string
-	Regex      bool
 }
 
 func filterItems(items []Item, itemFilters ItemFilters) []Item {
