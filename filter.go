@@ -164,6 +164,7 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 			}
 		case "taguuid": // Tag UUID
 			var matchesTag bool
+
 			for _, tag := range tags {
 				for _, ref := range tag.Content.References() {
 					if item.UUID == ref.UUID {

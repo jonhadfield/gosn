@@ -39,6 +39,31 @@ func TestFilterNoteUUID(t *testing.T) {
 	assert.True(t, res, "failed to match note by uuid")
 }
 
+func TestFilterNoteByTagUUID(t *testing.T) {
+	nUUID := GenUUID()
+	tUUID := GenUUID()
+	animalTag := createTag("Animal", tUUID)
+	gnuNote := createNote("GNU", "Is not Unix", nUUID)
+	ref := ItemReference{
+		UUID:        nUUID,
+		ContentType: "Note",
+	}
+	animalTag.Content.UpsertReferences([]ItemReference{ref})
+
+	filter := Filter{
+		Type:       "Note",
+		Key:        "TagUUID",
+		Comparison: "==",
+		Value:      tUUID,
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyNoteFilters(*gnuNote, itemFilters, []Item{*animalTag})
+	assert.True(t, res, "failed to match note by tag uuid")
+}
+
 func TestFilterNoteTitleContains(t *testing.T) {
 	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
