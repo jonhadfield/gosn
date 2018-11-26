@@ -169,8 +169,11 @@ func _getItems(session Session, itemFilters ItemFilters) (items []Item, err erro
 	return
 }
 
-func createNote(title, text string) *Item {
+func createNote(title, text, uuid string) *Item {
 	note := NewNote()
+	if uuid != "" {
+		note.UUID = uuid
+	}
 	content := NewNoteContent()
 	content.Title = title
 	content.Text = text
@@ -178,8 +181,11 @@ func createNote(title, text string) *Item {
 	return note
 }
 
-func createTag(title string) *Item {
+func createTag(title, uuid string) *Item {
 	tag := NewTag()
+	if uuid != "" {
+		tag.UUID = uuid
+	}
 	content := NewTagContent()
 	content.Title = title
 	tag.Content = content
@@ -261,14 +267,14 @@ func TestNoteTagging(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	dogNote := createNote("Dogs", "Can't look up")
-	cheeseNote := createNote("Cheese", "Is not a vegetable")
-	baconNote := createNote("Bacon", "Goes with everything")
-	gnuNote := createNote("GNU", "Is not Unix")
-	spiderNote := createNote("Spiders", "Are not welcome")
+	dogNote := createNote("Dogs", "Can't look up", "")
+	cheeseNote := createNote("Cheese", "Is not a vegetable", "")
+	baconNote := createNote("Bacon", "Goes with everything", "")
+	gnuNote := createNote("GNU", "Is not Unix", "")
+	spiderNote := createNote("Spiders", "Are not welcome", "")
 
-	animalTag := createTag("Animal Facts")
-	foodTag := createTag("Food Facts")
+	animalTag := createTag("Animal Facts", "")
+	foodTag := createTag("Food Facts", "")
 
 	// tag dog and gnu note with animal tag
 	updatedAnimalTagsInput := UpdateItemRefsInput{

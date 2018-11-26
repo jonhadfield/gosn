@@ -7,7 +7,7 @@ import (
 )
 
 func TestFilterNoteTitle(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Note",
 		Key:        "Title",
@@ -22,8 +22,25 @@ func TestFilterNoteTitle(t *testing.T) {
 	assert.True(t, res, "failed to match note by title")
 }
 
+func TestFilterNoteUUID(t *testing.T) {
+	uuid := GenUUID()
+	gnuNote := createNote("GNU", "Is not Unix", uuid)
+	filter := Filter{
+		Type:       "Note",
+		Key:        "UUID",
+		Comparison: "==",
+		Value:      uuid,
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyNoteFilters(*gnuNote, itemFilters, nil)
+	assert.True(t, res, "failed to match note by uuid")
+}
+
 func TestFilterNoteTitleContains(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Note",
 		Key:        "Title",
@@ -39,7 +56,7 @@ func TestFilterNoteTitleContains(t *testing.T) {
 }
 
 func TestFilterNoteText(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Note",
 		Key:        "Text",
@@ -55,7 +72,7 @@ func TestFilterNoteText(t *testing.T) {
 }
 
 func TestFilterNoteTextContains(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Note",
 		Key:        "Text",
@@ -71,7 +88,7 @@ func TestFilterNoteTextContains(t *testing.T) {
 }
 
 func TestFilterNoteTitleNotEqualTo(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Note",
 		Key:        "Title",
@@ -87,7 +104,7 @@ func TestFilterNoteTitleNotEqualTo(t *testing.T) {
 }
 
 func TestFilterNoteTextNotEqualTo(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Note",
 		Key:        "Text",
@@ -103,7 +120,7 @@ func TestFilterNoteTextNotEqualTo(t *testing.T) {
 }
 
 func TestFilterNoteTextByRegex(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Note",
 		Key:        "Text",
@@ -119,7 +136,7 @@ func TestFilterNoteTextByRegex(t *testing.T) {
 }
 
 func TestFilterNoteTitleByRegex(t *testing.T) {
-	gnuNote := createNote("GNU", "Is not Unix")
+	gnuNote := createNote("GNU", "Is not Unix", "")
 	filter := Filter{
 		Type:       "Tag",
 		Key:        "Title",
@@ -135,7 +152,7 @@ func TestFilterNoteTitleByRegex(t *testing.T) {
 }
 
 func TestFilterTagTitle(t *testing.T) {
-	gnuTag := createTag("GNU")
+	gnuTag := createTag("GNU", "")
 	filter := Filter{
 		Type:       "Tag",
 		Key:        "Title",
@@ -150,8 +167,25 @@ func TestFilterTagTitle(t *testing.T) {
 	assert.True(t, res, "failed to match tag by title")
 }
 
+func TestFilterTagUUID(t *testing.T) {
+	uuid := GenUUID()
+	gnuTag := createTag("GNU", uuid)
+	filter := Filter{
+		Type:       "Tag",
+		Key:        "UUID",
+		Comparison: "==",
+		Value:      uuid,
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res := applyTagFilters(*gnuTag, itemFilters)
+	assert.True(t, res, "failed to match tag by uuid")
+}
+
 func TestFilterTagTitleByRegex(t *testing.T) {
-	gnuTag := createTag("GNU")
+	gnuTag := createTag("GNU", "")
 	filter := Filter{
 		Type:       "Tag",
 		Key:        "Title",
@@ -167,7 +201,7 @@ func TestFilterTagTitleByRegex(t *testing.T) {
 }
 
 func TestFilterTagTitleByNotEqualTo(t *testing.T) {
-	gnuTag := createTag("GNU")
+	gnuTag := createTag("GNU", "")
 	filter := Filter{
 		Type:       "Tag",
 		Key:        "Title",
