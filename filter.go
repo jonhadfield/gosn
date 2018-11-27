@@ -61,6 +61,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "==":
@@ -70,6 +73,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 
 					}
@@ -80,6 +86,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "contains":
@@ -90,6 +99,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						matchedAll = true
 
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				}
@@ -110,6 +122,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "==":
@@ -119,6 +134,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "!=":
@@ -128,6 +146,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "contains":
@@ -137,6 +158,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				}
@@ -159,6 +183,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 				}
 				matchedAll = true
 			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
 				matchedAll = false
 			}
 		case "taguuid": // Tag UUID
@@ -177,6 +204,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 				}
 				matchedAll = true
 			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
 				matchedAll = false
 			}
 		case "uuid": // UUID
@@ -186,6 +216,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 				}
 				matchedAll = true
 			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
 				matchedAll = false
 			}
 		case "deleted":
@@ -196,16 +229,17 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 				}
 				matchedAll = true
 			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
 				matchedAll = false
 			}
 		default:
 			matchedAll = true // if no criteria specified then filter applies to type only
 		}
 		// if last filter and matchedAll is true, then return true
-		if i == len(itemFilters.Filters)-1 {
-			if matchedAll {
-				return true
-			}
+		if matchedAll && i == len(itemFilters.Filters)-1 {
+			return true
 		}
 	}
 	return matchedAll
@@ -231,6 +265,9 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "==":
@@ -240,6 +277,9 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 						}
 						matchedAll = true
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "!=":
@@ -250,6 +290,9 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 						matchedAll = true
 
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				case "contains":
@@ -260,6 +303,9 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 						matchedAll = true
 
 					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
 						matchedAll = false
 					}
 				}
@@ -272,16 +318,17 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 				matchedAll = true
 
 			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
 				matchedAll = false
 			}
 		default:
 			matchedAll = true // if no criteria specified then filter applies to type only, so true
 		}
 		// if last filter and matchedAll is true, then return true
-		if i == len(itemFilters.Filters)-1 {
-			if matchedAll {
-				return true
-			}
+		if matchedAll && i == len(itemFilters.Filters)-1 {
+			return true
 		}
 	}
 
