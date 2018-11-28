@@ -423,7 +423,7 @@ func TestSearchNotesByUUID(t *testing.T) {
 	}
 	var dogFactUUID string
 	_, dis, _, err := decryptItems(cnO.ResponseBody, sOutput.Session.Mk, sOutput.Session.Ak)
-
+	assert.NoError(t, err)
 	idb, _ := processDecryptedItems(dis)
 	for _, di := range idb {
 		if di.Content.GetTitle() == "Dog Fact" {
