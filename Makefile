@@ -17,25 +17,7 @@ fmt:
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofmt -w -s "$$file"; goimports -w "$$file"; done
 
 lint:
-	gometalinter -e testing.go -e validation_test.go --vendor --disable-all \
-		--enable=deadcode \
-		--enable=gocyclo \
-		--enable=errcheck \
-		--enable=gofmt \
-		--enable=goimports \
-		--enable=golint \
-		--enable=gosimple \
-		--enable=ineffassign \
-		--enable=unconvert \
-		--enable=varcheck \
-		--enable=staticcheck \
-		--enable=unparam\
-		--enable=varcheck \
-		--enable=dupl \
-		--enable=structcheck \
-		--enable=vetshadow \
-		--deadline=10m \
-		./...
+	golangci-lint run --enable-all --disable lll
 
 ci: lint test
 
