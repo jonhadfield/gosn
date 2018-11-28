@@ -503,14 +503,14 @@ type NoteContent struct {
 	AppData        AppDataContent  `json:"appData"`
 }
 
-func (input NoteContent) GetUpdateTime() (time.Time, error) {
+func (input *NoteContent) GetUpdateTime() (time.Time, error) {
 	if input.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
 		return time.Time{}, fmt.Errorf("notset")
 	}
 	return time.Parse(timeLayout, input.AppData.OrgStandardNotesSN.ClientUpdatedAt)
 }
 
-func (input TagContent) GetUpdateTime() (time.Time, error) {
+func (input *TagContent) GetUpdateTime() (time.Time, error) {
 	if input.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
 		return time.Time{}, fmt.Errorf("notset")
 	}
@@ -526,7 +526,7 @@ func (input *TagContent) SetUpdateTime(uTime time.Time) {
 	input.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
 }
 
-func (input NoteContent) GetTitle() string {
+func (input *NoteContent) GetTitle() string {
 	return input.Title
 }
 
@@ -538,30 +538,30 @@ func (input *TagContent) SetTitle(title string) {
 	input.Title = title
 }
 
-func (input NoteContent) GetText() string {
+func (input *NoteContent) GetText() string {
 	return input.Text
 }
 
-func (input TagContent) GetText() string {
+func (input *TagContent) GetText() string {
 	// Tags only have titles, so empty string
 	return ""
 }
 
-func (input TagContent) TextContains(findString string, matchCase bool) bool {
+func (input *TagContent) TextContains(findString string, matchCase bool) bool {
 	// Tags only have titles, so always false
 	return false
 }
 
-func (input TagContent) GetTitle() string {
+func (input *TagContent) GetTitle() string {
 	return input.Title
 }
 
-func (input TagContent) References() []ItemReference {
+func (input *TagContent) References() []ItemReference {
 	var output []ItemReference
 	return append(output, input.ItemReferences...)
 }
 
-func (input NoteContent) References() []ItemReference {
+func (input *NoteContent) References() []ItemReference {
 	var output []ItemReference
 	return append(output, input.ItemReferences...)
 }
