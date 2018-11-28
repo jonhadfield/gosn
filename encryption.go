@@ -5,7 +5,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -101,7 +101,7 @@ func encryptString(stringToEncrypt, encryptionKey, authKey, uuid string, IVOverr
 		IV = IVOverride
 	} else {
 		IV = make([]byte, 16)
-		_, err = rand.Read(IV)
+		_, err = crand.Read(IV)
 		if err != nil {
 			return
 		}
@@ -237,7 +237,7 @@ func encryptItem(item Item, mk, ak string) (encryptedItem encryptedItem, err err
 	encryptedItem.Deleted = item.Deleted
 	// Generate Item Key
 	itemKeyBytes := make([]byte, 64)
-	_, err = rand.Read(itemKeyBytes)
+	_, err = crand.Read(itemKeyBytes)
 	if err != nil {
 		panic(err)
 	}
