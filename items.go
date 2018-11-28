@@ -493,7 +493,7 @@ type OrgStandardNotesSNDetail struct {
 	ClientUpdatedAt string `json:"client_updated_at"`
 }
 type AppDataContent struct {
-	OrgStandardNotesSN OrgStandardNotesSNDetail `json:"org.standardnotes.sn"`
+	OrgStandardNotesSN OrgStandardNotesSNDetail `json:"org.standardnotes.sn",yaml:"org.standardnotes.sn"`
 }
 
 type NoteContent struct {
