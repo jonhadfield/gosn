@@ -73,6 +73,8 @@ type ClientStructure interface {
 	GetUpdateTime() (time.Time, error)
 	// set last update time
 	SetUpdateTime(time.Time)
+	// get appdata
+	GetAppData() AppDataContent
 }
 
 type syncResponse struct {
@@ -559,6 +561,14 @@ func (input *TagContent) GetTitle() string {
 func (input *TagContent) References() []ItemReference {
 	var output []ItemReference
 	return append(output, input.ItemReferences...)
+}
+
+func (input *TagContent) GetAppData() AppDataContent {
+	return input.AppData
+}
+
+func (input *NoteContent) GetAppData() AppDataContent {
+	return input.AppData
 }
 
 func (input *NoteContent) References() []ItemReference {
