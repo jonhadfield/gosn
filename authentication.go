@@ -371,8 +371,8 @@ func (input RegisterInput) Register() (token string, err error) {
 	if err != nil {
 		return
 	}
-	token, err = processDoRegisterRequestResponse(response)
 	defer response.Body.Close()
+	token, err = processDoRegisterRequestResponse(response)
 	if err != nil {
 		return
 	}
