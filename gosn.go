@@ -13,7 +13,7 @@ const (
 	signInPath       = "/auth/sign_in" // remote path for authenticating
 	syncPath         = "/items/sync"   // remote path for making sync calls
 	// PageSize is the maximum number of items to return with each call
-	PageSize            = 200
+	PageSize            = 150
 	timeLayout          = "2006-01-02T15:04:05.000Z"
 	defaultSNVersion    = "003"
 	defaultPasswordCost = 110000
@@ -25,8 +25,8 @@ const (
 	funcNameOutputEnd   = "]"    // suffix for outputting function name in log messages
 
 	// HTTP
-	maxIdleConnections = 5  // HTTP transport limit
-	requestTimeout     = 60 // HTTP transport limit
+	maxIdleConnections = 100 // HTTP transport limit
+	requestTimeout     = 60  // HTTP transport limit
 )
 
 var (
@@ -46,7 +46,6 @@ func createHTTPClient() *http.Client {
 		},
 		Timeout: time.Duration(requestTimeout) * time.Second,
 	}
-
 	return client
 }
 
