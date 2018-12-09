@@ -386,7 +386,7 @@ func generateInitialKeysAndAuthParamsForUser(email, password string) (pw, pwNonc
 	genInput.Version = defaultSNVersion
 	genInput.Identifier = email
 	genInput.PasswordCost = defaultPasswordCost
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	b := make([]rune, 65)
 	for i := range b {
 		b[i] = letterRunes[mathrand.Intn(len(letterRunes))]
