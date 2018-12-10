@@ -117,7 +117,7 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 	return
 }
 
-func _deleteAllTagsAndNotes(session Session) (err error) {
+func _deleteAllTagsAndNotes(session *Session) (err error) {
 	gnf := Filter{
 		Type: "Note",
 	}
@@ -129,7 +129,7 @@ func _deleteAllTagsAndNotes(session Session) (err error) {
 		MatchAny: true,
 	}
 	gii := GetItemsInput{
-		Session: session,
+		Session: *session,
 		Filters: f,
 	}
 	i, err := GetItems(gii)
@@ -144,7 +144,7 @@ func _deleteAllTagsAndNotes(session Session) (err error) {
 	}
 
 	putItemsInput := PutItemsInput{
-		Session: session,
+		Session: *session,
 		Items:   toDel,
 	}
 	_, err = PutItems(putItemsInput)
@@ -193,12 +193,18 @@ func createTag(title, uuid string) *Item {
 	return tag
 }
 
+func cleanup(session *Session) {
+	if err := _deleteAllTagsAndNotes(session); err != nil {
+		panic(err)
+	}
+}
+
 func TestPutItemsAddSingleNote(t *testing.T) {
 	//SetDebugLogger(log.Println)
+
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
-	assert.NoError(t, _deleteAllTagsAndNotes(sOutput.Session), "failed to delete items")
-
+	defer cleanup(&sOutput.Session)
 	randPara := testParas[randInt(0, len(testParas))]
 
 	newNoteContent := NoteContent{
@@ -245,10 +251,6 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 		t.Errorf("failed to get created Item by UUID")
 	}
 
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 }
 
 func TestNoteTagging(t *testing.T) {
@@ -256,6 +258,7 @@ func TestNoteTagging(t *testing.T) {
 
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
 
 	// create base notes
 	newNotes := genNotes(100, 2)
@@ -401,17 +404,14 @@ func TestNoteTagging(t *testing.T) {
 		}
 	}
 
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
-
 }
 
 func TestSearchNotesByUUID(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
+
 	// create two notes
 	noteInput := map[string]string{
 		"Cheese Fact": "Cheese is not a vegetable",
@@ -459,10 +459,6 @@ func TestSearchNotesByUUID(t *testing.T) {
 		t.Errorf("expected one note but got: %d", len(foundItems))
 
 	}
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 
 }
 
@@ -470,6 +466,7 @@ func TestSearchNotesByText(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
 
 	// create two notes
 	noteInput := map[string]string{
@@ -508,10 +505,6 @@ func TestSearchNotesByText(t *testing.T) {
 		t.Errorf("expected one note but got: %d", len(foundItems))
 
 	}
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 
 }
 
@@ -519,6 +512,7 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
 
 	// create two notes
 	noteInput := map[string]string{
@@ -557,10 +551,6 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 		t.Errorf("expected one note but got: %d", len(foundItems))
 
 	}
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 
 }
 
@@ -568,6 +558,7 @@ func TestSearchTagsByText(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
 
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
 	if _, err = _createTags(sOutput.Session, tagInput); err != nil {
@@ -599,10 +590,6 @@ func TestSearchTagsByText(t *testing.T) {
 		t.Errorf("expected one tag but got: %d", len(foundItems))
 
 	}
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 
 }
 
@@ -610,6 +597,7 @@ func TestSearchTagsByRegex(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
 
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
 	if _, err = _createTags(sOutput.Session, tagInput); err != nil {
@@ -641,16 +629,14 @@ func TestSearchTagsByRegex(t *testing.T) {
 		t.Errorf("expected one tag but got: %d", len(foundItems))
 
 	}
-	// clean up
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
 
 }
 
 func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
+
 	newNotes := genNotes(200, 2)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
@@ -695,11 +681,6 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 	if len(retrievedNotes) != 200 {
 		t.Errorf("expected 200 items but got %d\n", len(retrievedNotes))
 	}
-
-	if err := _deleteAllTagsAndNotes(sOutput.Session); err != nil {
-		t.Errorf("failed to delete items")
-	}
-
 }
 
 func genRandomText(paragraphs int) string {
