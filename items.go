@@ -213,6 +213,10 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 		if err != nil {
 			return
 		}
+		if syncResp.StatusCode > 400 {
+			syncResp.Body.Close()
+			return output, fmt.Errorf("%+v\n%+v\n", syncResp.Header, syncResp.Body)
+		}
 		// process response body
 		syncRespBodyBytes, err = getResponseBody(syncResp)
 		if err != nil {
@@ -430,6 +434,9 @@ func getItems(input GetItemsInput) (out GetItemsOutput, err error) {
 	syncRespBodyBytes, err = getResponseBody(syncResp)
 	if err != nil {
 		return
+	}
+	if syncResp.StatusCode > 400 {
+		return out, fmt.Errorf("%+v\n%+v\n", syncResp.Header, syncResp.Body)
 	}
 	err = syncResp.Body.Close()
 	if err != nil {
