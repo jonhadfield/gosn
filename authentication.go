@@ -338,7 +338,7 @@ func processDoRegisterRequestResponse(response *http.Response) (token string, er
 		var errResp errorResponse
 		err = json.Unmarshal(body, &errResp)
 		if errResp.Error.Message != "" {
-			err = fmt.Errorf("error: email is already registered")
+			err = fmt.Errorf("email is already registered")
 			return
 		}
 	default:
