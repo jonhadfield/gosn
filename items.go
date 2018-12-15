@@ -3,9 +3,14 @@ package gosn
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"gopkg.in/matryer/try.v1"
+	"log"
+	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -67,6 +72,8 @@ type ClientStructure interface {
 	GetTitle() string
 	// set title
 	SetTitle(input string)
+	// set text
+	SetText(input string)
 	// return text
 	GetText() string
 	// get last update time
@@ -75,6 +82,8 @@ type ClientStructure interface {
 	SetUpdateTime(time.Time)
 	// get appdata
 	GetAppData() AppDataContent
+	// set appdata
+	SetAppData(data AppDataContent)
 }
 
 type syncResponse struct {
@@ -116,10 +125,38 @@ type GetItemsOutput struct {
 	Cursor     string
 }
 
+const retryScaleFactor = 0.25
+
+func resizeForRetry(in *GetItemsInput) {
+	switch {
+	case in.BatchSize != 0:
+		in.BatchSize = int(math.Ceil(float64(in.BatchSize) * retryScaleFactor))
+	case in.PageSize != 0:
+		in.PageSize = int(math.Ceil(float64(in.PageSize) * retryScaleFactor))
+	default:
+		in.PageSize = int(math.Ceil(float64(PageSize) * retryScaleFactor))
+	}
+}
+
 // GetItems retrieves items from the API using optional filters
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	funcName := funcNameOutputStart + "GetItems" + funcNameOutputEnd
-	output, err = getItems(input)
+
+	// retry logic is to handle responses that are too large
+	// so we can reduce number we retrieve with each sync request
+	rErr := try.Do(func(attempt int) (bool, error) {
+		var rErr error
+		output, rErr = getItems(input)
+		if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
+			fmt.Println("Retrying with smaller limit as response was too large.")
+			resizeForRetry(&input)
+		}
+		return attempt < 3, err
+	})
+	if rErr != nil {
+		log.Fatalln("error:", err)
+	}
+
 	// strip any duplicates (https://github.com/standardfile/rails-engine/issues/5)
 	output.DeDupe()
 	// filter results if provided
@@ -192,8 +229,31 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 	var syncRespBodyBytes, encItemJSON []byte
 	var savedItems []encryptedItem
 	var final bool
+	// TODO: retry logic here!
+
+	//rErr := try.Do(func(attempt int) (bool, error) {
+	//	var rErr error
+	//	output, rErr = getItems(input)
+	//	if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
+	//		fmt.Println("Retrying with smaller limit as response was too large.")
+	//		resizeForRetry(&input)
+	//	}
+	//	return attempt < 3, err
+	//})
+	//if rErr != nil {
+	//	log.Fatalln("error:", err)
+	//}
+
+	//usePageSize := PageSize
+
 	for x := 0; x <= len(encryptedItems); x += PageSize {
 		debug(funcName, fmt.Sprintf("putting %d items", PageSize))
+
+
+		// Set initial putSize to be PageSize
+
+
+		// START
 		var chunkLast int
 		if len(encryptedItems) < x+PageSize {
 			chunkLast = len(encryptedItems)
@@ -217,6 +277,10 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 			syncResp.Body.Close()
 			return output, fmt.Errorf("%+v\n%+v\n", syncResp.Header, syncResp.Body)
 		}
+		// END
+
+
+
 		// process response body
 		syncRespBodyBytes, err = getResponseBody(syncResp)
 		if err != nil {
@@ -245,6 +309,9 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 
 	return
 }
+
+
+
 
 type encryptedItem struct {
 	UUID        string `json:"uuid"`
@@ -435,8 +502,9 @@ func getItems(input GetItemsInput) (out GetItemsOutput, err error) {
 	if err != nil {
 		return
 	}
-	if syncResp.StatusCode > 400 {
-		return out, fmt.Errorf("%+v\n%+v\n", syncResp.Header, syncResp.Body)
+	if syncResp.StatusCode == 413 {
+		fmt.Println("413 err: request entity too large")
+		return out, errors.New("413: request entity too large")
 	}
 	err = syncResp.Body.Close()
 	if err != nil {
@@ -551,9 +619,17 @@ func (input *NoteContent) GetText() string {
 	return input.Text
 }
 
+func (input *NoteContent) SetText(text string) {
+	input.Text = text
+}
+
 func (input *TagContent) GetText() string {
 	// Tags only have titles, so empty string
 	return ""
+}
+
+func (input *TagContent) SetText(text string) {
+
 }
 
 func (input *TagContent) TextContains(findString string, matchCase bool) bool {
@@ -576,6 +652,14 @@ func (input *TagContent) GetAppData() AppDataContent {
 
 func (input *NoteContent) GetAppData() AppDataContent {
 	return input.AppData
+}
+
+func (input *NoteContent) SetAppData(data AppDataContent) {
+	input.AppData = data
+}
+
+func (input *TagContent) SetAppData(data AppDataContent) {
+	input.AppData = data
 }
 
 func (input *NoteContent) References() []ItemReference {
