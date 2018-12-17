@@ -695,7 +695,7 @@ func TestCreateAndGet301Notes(t *testing.T) {
 	assert.NoError(t, err, "sign-in failed", err)
 	defer cleanup(&sOutput.Session)
 
-	newNotes := genNotes(numNotes, 20)
+	newNotes := genNotes(numNotes, 10)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
 		Items:   newNotes,

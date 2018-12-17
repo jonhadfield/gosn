@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/matryer/try.v1"
 	"log"
 	"math"
 	"net/http"
@@ -147,7 +148,10 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 		var rErr error
 		output, rErr = getItems(input)
 		if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
+			initialSize := input.PageSize
 			resizeForRetry(&input)
+			debug(funcName, fmt.Sprintf("failed to retrieve %d items " +
+				"at a time so reducing to %d", initialSize, input.PageSize))
 		}
 		return attempt < 3, rErr
 	})
