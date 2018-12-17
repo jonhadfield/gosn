@@ -139,6 +139,12 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 	var toDel []Item
 	for x := range i.Items {
 		md := i.Items[x]
+		switch md.ContentType {
+		case "Note":
+			md.Content = NewNoteContent()
+		case "Tag":
+			md.Content = NewTagContent()
+		}
 		md.Deleted = true
 		toDel = append(toDel, md)
 	}
@@ -683,6 +689,63 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 	}
 }
 
+func TestCreateAndGet301Notes(t *testing.T) {
+	numNotes := 301
+	sOutput, err := SignIn(sInput)
+	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
+
+	newNotes := genNotes(numNotes, 20)
+	pii := PutItemsInput{
+		Session: sOutput.Session,
+		Items:   newNotes,
+	}
+	_, err = PutItems(pii)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	var retrievedNotes []Item
+	var cursorToken string
+	for {
+		giFilter := Filter{
+			Type:  "Note",
+			Key:   "Deleted",
+			Value: "False",
+		}
+		giFilters := ItemFilters{
+			Filters: []Filter{giFilter},
+		}
+		gii := GetItemsInput{
+			Session:     sOutput.Session,
+			Filters:     giFilters,
+			CursorToken: cursorToken,
+		}
+		var gio GetItemsOutput
+		gio, err = GetItems(gii)
+		if err != nil {
+			t.Error(err)
+		}
+
+		retrievedNotes = append(retrievedNotes, gio.Items...)
+		if stripLineBreak(gio.Cursor) == "" {
+			break
+		} else {
+			cursorToken = gio.Cursor
+		}
+	}
+	if len(retrievedNotes) != numNotes {
+		t.Errorf("expected %d items but got %d\n", numNotes, len(retrievedNotes))
+	}
+	retrievedNotes = DeDupeItems(retrievedNotes)
+	for i, r := range retrievedNotes {
+		if ! strings.HasPrefix(r.Content.GetTitle(), fmt.Sprintf("-%d-", i+1)) {
+			fmt.Println("expected:", i+1, "got", r.Content.GetTitle())
+			t.Errorf("incorrect note returned")
+		}
+	}
+
+}
+
 func genRandomText(paragraphs int) string {
 	var strBuilder strings.Builder
 
@@ -696,7 +759,7 @@ func genNotes(num int, textParas int) (notes []Item) {
 	for i := 1; i <= num; i++ {
 		time.Sleep(3 * time.Millisecond)
 		noteContent := &NoteContent{
-			Title:          fmt.Sprintf("%d,%s", i, "Title"),
+			Title:          fmt.Sprintf("-%d-,%s", i, "Title"),
 			Text:           fmt.Sprintf("%d,%s", i, genRandomText(textParas)),
 			ItemReferences: []ItemReference{},
 		}

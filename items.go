@@ -148,7 +148,6 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 		var rErr error
 		output, rErr = getItems(input)
 		if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
-			fmt.Println("Retrying with smaller limit as response was too large.")
 			resizeForRetry(&input)
 		}
 		return attempt < 3, rErr
@@ -211,9 +210,8 @@ func validateInput(input PutItemsInput) error {
 // PutItems validates and then syncs items via API
 func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 	funcName := funcNameOutputStart + "PutItems" + funcNameOutputEnd
-	debug(funcName, fmt.Errorf("putting items: %+v", input.Items))
-	fmt.Println("At start of PutItems and length of input items is:", len(input.Items))
-	debug(funcName, stripLineBreak(fmt.Sprintf("sync token: %+v", input.SyncToken)))
+	debug(funcName, fmt.Sprintf("putting %d items", len(input.Items)))
+
 	err = validateInput(input)
 	if err != nil {
 		return
@@ -227,130 +225,75 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 
 	// for each page size, send to push and get response
 	syncToken := stripLineBreak(input.SyncToken)
-	//var syncRespBodyBytes, encItemJSON []byte
 	var savedItems []encryptedItem
-	//var final bool
-	// TODO: retry logic here!
 
-	//rErr := try.Do(func(attempt int) (bool, error) {
-	//	var rErr error
-	//	output, rErr = getItems(input)
-	//	if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
-	//		fmt.Println("Retrying with smaller limit as response was too large.")
-	//		resizeForRetry(&input)
-	//	}
-	//	return attempt < 3, err
-	//})
-	//if rErr != nil {
-	//	log.Fatalln("error:", err)
-	//}
-
-	//usePageSize := PageSize
-	fmt.Println("Got", len(encryptedItems), "items to put")
 	// put items in big chunks, default being page size
 	for x := 0; x < len(encryptedItems); x += PageSize {
-		debug(funcName, fmt.Sprintf("putting %d items", PageSize))
-		fmt.Println("at start of outer loop with x:", x)
-		// Set initial putSize to be PageSize
-		// retry logic is to handle responses that are too large
-		// so we can reduce number we retrieve with each sync request
-
-		var finalBigChunk bool
-		var bigChunkLast int
+		var finalChunk bool
+		var lastItemInChunkIndex int
 		// if current big chunk > num encrypted items then it's the last
 		if x+PageSize >= len(encryptedItems) {
-			bigChunkLast = len(encryptedItems) - 1
-			fmt.Println("final big chunk with first item:", x, "and last item:", bigChunkLast)
-			finalBigChunk = true
+			lastItemInChunkIndex = len(encryptedItems) - 1
+			finalChunk = true
 		} else {
-			fmt.Println("NOT final big chunk. first item:", x, "and last item:", bigChunkLast)
-			bigChunkLast = x + PageSize
+			lastItemInChunkIndex = x + PageSize
 		}
-		bigChunkSize := (bigChunkLast - x) + 1
-		fmt.Println("bigChunkSize:", bigChunkSize)
-		fullChunk := encryptedItems[x:bigChunkLast+1]
+		debug(funcName, fmt.Sprintf("putting items: %d to %d", x, lastItemInChunkIndex+1))
+
+		bigChunkSize := (lastItemInChunkIndex - x) + 1
+		fullChunk := encryptedItems[x : lastItemInChunkIndex+1]
 		var subChunkStart, subChunkEnd int
 		subChunkStart = x
-		subChunkEnd = bigChunkLast
+		subChunkEnd = lastItemInChunkIndex
 		// initialise running total
-		runningChunkTotal := 0
+		totalPut := 0
 		// keep trying to push chunk of encrypted items in reducing subChunk sizes until it succeeds
+		maxAttempts := 20
+		try.MaxRetries = 20
 		for {
-			fmt.Println("\tstart inf loop with subChunkStart", subChunkStart, "subChunkEnd", subChunkEnd)
-
-			// START PUTTING CHUNK/SUB-CHUNKS
 			rErr := try.Do(func(attempt int) (bool, error) {
-				fmt.Println("\tIn Try with sub chunk end:", subChunkEnd)
 				var rErr error
-				// START
 				// if chunk is too big to put then try with smaller chunk
 				var encItemJSON []byte
-				itemsToPut := encryptedItems[subChunkStart:subChunkEnd+1]
+				itemsToPut := encryptedItems[subChunkStart : subChunkEnd+1]
 				encItemJSON, _ = json.Marshal(itemsToPut)
 				var s []encryptedItem
-				fmt.Println("\ttrying to put items:", subChunkStart, "to:", subChunkEnd)
 				s, syncToken, rErr = putChunk(input.Session, encItemJSON)
 				if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
-					fmt.Println(rErr)
-					preShrink := subChunkEnd
-					fmt.Println("\tpreShrink:",preShrink)
-					subChunkEnd = int(math.Ceil(float64(subChunkEnd) * 0.75))
-					// if reducing by factor results in start being less or same as
-					// chunk end, then just try putting a single item
-					if subChunkEnd <= subChunkStart {
-						subChunkEnd = subChunkStart + 1
-					}
-					fmt.Println("\treducedSubChuckEnd:",subChunkEnd)
-
-					if preShrink == subChunkEnd && preShrink > 1 {
-						fmt.Println("preShrink is same as subChuckEnd and preShrink greater than one so decrementing to:", subChunkEnd-1)
-						subChunkEnd--
-					}
-					fmt.Println("\ttoo large. try putting with new sub chunk end:", subChunkEnd)
-
+					subChunkEnd = resizePutForRetry(subChunkStart, subChunkEnd)
 				}
 				if rErr == nil {
-					fmt.Println("\tsuccess: put:", subChunkStart, "to:", subChunkEnd)
 					savedItems = append(savedItems, s...)
-					runningChunkTotal += len(itemsToPut)
+					totalPut += len(itemsToPut)
 				}
-				fmt.Println("attempt:", attempt)
-				return attempt < 10, rErr
+				debug(funcName, fmt.Sprintf("attempt: %d of %d", attempt, maxAttempts))
+				return attempt < maxAttempts, rErr
 			})
 			if rErr != nil {
 				err = errors.New("failed to put all items")
 				return
 			}
-			// END PUTTING CHUNK/SUB-CHUNKS
 
 			// if it's not the last of the chunk then continue with next subChunk
-			if runningChunkTotal < bigChunkSize {
-				fmt.Println("\trunningChunkTotal:", runningChunkTotal, "is less than bigChunkLast", bigChunkLast)
+			if totalPut < bigChunkSize {
 				subChunkStart = subChunkEnd + 1
-				subChunkEnd = bigChunkLast
-				fmt.Println("\tcontinuing with subChunkStart:", subChunkStart)
+				subChunkEnd = lastItemInChunkIndex
 				continue
 			}
 
 			// if it's last of the full chunk, then break
-			fmt.Println("\tif len(fullChunk)-1 == bigChunkLast {", len(fullChunk), bigChunkLast)
-			if len(fullChunk) == bigChunkLast {
-				fmt.Println("\t... so breaking out here")
+			if len(fullChunk) == lastItemInChunkIndex {
 				break
 			}
 
-			if runningChunkTotal == len(fullChunk) {
-				fmt.Printf("\trunning total: %d fullChunk length: %d\n", runningChunkTotal, len(fullChunk))
+			if totalPut == len(fullChunk) {
 				break
 			}
-			fmt.Println("\tsetting subChunkStart to:", subChunkStart, "subChunkEnd set to:", subChunkEnd)
 
 		} // end infinite for loop for subset
-		if finalBigChunk {
-			fmt.Println("finalBigChunk == true")
+		if finalChunk {
 			break
 		}
-		fmt.Println("--- Bottom of for loop and x:", x, "and numEncryptedItems", len(encryptedItems))
 	} // end looping through encrypted items
 
 	output.ResponseBody.SyncToken = syncToken
@@ -359,8 +302,19 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 	return
 }
 
-func putChunk(session Session, encItemJSON []byte) (savedItems []encryptedItem, syncToken string, err error) {
+func resizePutForRetry(start, end int) int {
+	preShrink := end
+	end = int(math.Ceil(float64(end) * 0.90))
+	if end <= start {
+		end = start + 1
+	}
+	if preShrink == end && preShrink > 1 {
+		end--
+	}
+	return end
+}
 
+func putChunk(session Session, encItemJSON []byte) (savedItems []encryptedItem, syncToken string, err error) {
 	reqBody := []byte(`{"items":` + string(encItemJSON) +
 		`,"sync_token":"` + stripLineBreak(syncToken) + `"}`)
 	var syncResp *http.Response
@@ -368,8 +322,6 @@ func putChunk(session Session, encItemJSON []byte) (savedItems []encryptedItem, 
 	if err != nil {
 		return
 	}
-	//fmt.Println("Sync Response Status Code:", syncResp.StatusCode)
-	//fmt.Println("Sync Response Header:", syncResp.Header)
 	switch syncResp.StatusCode {
 	case 413:
 		err = errors.New("payload too large")
@@ -530,7 +482,6 @@ func (input *GetItemsOutput) DeDupe() {
 
 func makeSyncRequest(session Session, reqBody []byte) (response *http.Response, err error) {
 	funcName := funcNameOutputStart + "makeSyncRequest" + funcNameOutputEnd
-	debug(funcName, fmt.Errorf("request url: %s", session.Server+syncPath))
 
 	var request *http.Request
 	request, err = http.NewRequest(http.MethodPost, session.Server+syncPath, bytes.NewBuffer(reqBody))
@@ -540,6 +491,13 @@ func makeSyncRequest(session Session, reqBody []byte) (response *http.Response, 
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer "+session.Token)
 	response, err = httpClient.Do(request)
+
+	if response.StatusCode >= 400 {
+		debug(funcName, fmt.Errorf("sync of %d req bytes failed with: %s", len(reqBody), response.Status))
+	}
+	if response.StatusCode >= 200 && response.StatusCode < 300 {
+		debug(funcName, fmt.Errorf("sync of %d req bytes succeeded with: %s", len(reqBody), response.Status))
+	}
 	return
 }
 
