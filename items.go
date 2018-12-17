@@ -238,7 +238,7 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 		} else {
 			lastItemInChunkIndex = x + PageSize
 		}
-		debug(funcName, fmt.Sprintf("putting items: %d to %d", x, lastItemInChunkIndex+1))
+		debug(funcName, fmt.Sprintf("putting items: %d to %d", x+1, lastItemInChunkIndex+1))
 
 		bigChunkSize := (lastItemInChunkIndex - x) + 1
 		fullChunk := encryptedItems[x : lastItemInChunkIndex+1]
@@ -260,7 +260,7 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 				var s []encryptedItem
 				s, syncToken, rErr = putChunk(input.Session, encItemJSON)
 				if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
-					subChunkEnd = resizePutForRetry(subChunkStart, subChunkEnd)
+					subChunkEnd = resizePutForRetry(subChunkStart, subChunkEnd, len(encItemJSON))
 				}
 				if rErr == nil {
 					savedItems = append(savedItems, s...)
@@ -302,9 +302,15 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 	return
 }
 
-func resizePutForRetry(start, end int) int {
+func resizePutForRetry(start, end, numBytes int) int {
 	preShrink := end
-	end = int(math.Ceil(float64(end) * 0.90))
+	// reduce to 90%
+	multiplier := 0.90
+	// if size is over 2M then be more aggressive and half
+	if numBytes > 2000000 {
+		multiplier = 0.50
+	}
+	end = int(math.Ceil(float64(end) * multiplier))
 	if end <= start {
 		end = start + 1
 	}
