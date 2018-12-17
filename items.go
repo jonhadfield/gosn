@@ -558,7 +558,7 @@ func getItems(input GetItemsInput) (out GetItemsOutput, err error) {
 		return
 	}
 
-	// get encypted items from API response
+	// get encrypted items from API response
 	var bodyContent syncResponse
 	bodyContent, err = getBodyContent(syncRespBodyBytes)
 	if err != nil {
