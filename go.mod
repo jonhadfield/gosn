@@ -8,7 +8,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.2.2
-	golang.org/x/crypto v0.0.0-20181127143415-eb0de9b17e85
+	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/matryer/try.v1 v1.0.0-20150601225556-312d2599e12e
 )
