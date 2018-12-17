@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/matryer/try.v1"
 	"log"
 	"math"
 	"net/http"

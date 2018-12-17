@@ -738,7 +738,7 @@ func TestCreateAndGet301Notes(t *testing.T) {
 	}
 	retrievedNotes = DeDupeItems(retrievedNotes)
 	for i, r := range retrievedNotes {
-		if ! strings.HasPrefix(r.Content.GetTitle(), fmt.Sprintf("-%d-", i+1)) {
+		if !strings.HasPrefix(r.Content.GetTitle(), fmt.Sprintf("-%d-", i+1)) {
 			fmt.Println("expected:", i+1, "got", r.Content.GetTitle())
 			t.Errorf("incorrect note returned")
 		}
