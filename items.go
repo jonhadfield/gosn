@@ -546,7 +546,7 @@ func getItems(input GetItemsInput) (out GetItemsOutput, err error) {
 		requestBody = []byte(`{"limit":` + strconv.Itoa(limit) +
 			`,"items":[],"sync_token":"` + input.SyncToken + `\n","cursor_token":null}`)
 	case input.CursorToken != "":
-		debug(funcName, fmt.Sprintf("\ncursor is %s", stripLineBreak(input.CursorToken)))
+		debug(funcName, fmt.Sprintf("cursor is %s", stripLineBreak(input.CursorToken)))
 		rawST := input.SyncToken
 		input.SyncToken = stripLineBreak(rawST)
 		newST := stripLineBreak(input.SyncToken)
