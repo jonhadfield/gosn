@@ -175,7 +175,6 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 						}
 					}
 				}
-
 			}
 			if matchesTag {
 				if itemFilters.MatchAny {
@@ -190,25 +189,43 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 			}
 		case "taguuid": // Tag UUID
 			var matchesTag bool
-
 			for _, tag := range tags {
-				for _, ref := range tag.Content.References() {
-					if item.UUID == ref.UUID {
-						matchesTag = true
+				if tag.UUID == filter.Value {
+					for _, ref := range tag.Content.References() {
+						if item.UUID == ref.UUID {
+							matchesTag = true
+							break
+						}
 					}
 				}
 			}
-			if matchesTag {
-				if itemFilters.MatchAny {
-					return true
+			switch filter.Comparison {
+			case "==":
+				if matchesTag {
+					if itemFilters.MatchAny {
+						return true
+					}
+					matchedAll = true
+				} else {
+					if !itemFilters.MatchAny {
+						return false
+					}
+					matchedAll = false
 				}
-				matchedAll = true
-			} else {
-				if !itemFilters.MatchAny {
-					return false
+			case "!=":
+				if !matchesTag {
+					if itemFilters.MatchAny {
+						return true
+					}
+					matchedAll = true
+				} else {
+					if !itemFilters.MatchAny {
+						return false
+					}
+					matchedAll = false
 				}
-				matchedAll = false
 			}
+
 		case "uuid": // UUID
 			if item.UUID == filter.Value {
 				if itemFilters.MatchAny {

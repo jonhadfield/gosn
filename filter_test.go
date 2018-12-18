@@ -56,12 +56,35 @@ func TestFilterNoteByTagUUID(t *testing.T) {
 		Comparison: "==",
 		Value:      tUUID,
 	}
+	// try match any
 	itemFilters := ItemFilters{
 		Filters:  []Filter{filter},
 		MatchAny: true,
 	}
 	res := applyNoteFilters(*gnuNote, itemFilters, []Item{*animalTag})
-	assert.True(t, res, "failed to match note by tag uuid")
+	assert.True(t, res, "failed to match any note by tag uuid")
+
+	// try match all
+	itemFilters = ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: false,
+	}
+	res = applyNoteFilters(*gnuNote, itemFilters, []Item{*animalTag})
+	assert.True(t, res, "failed to match all notes by tag uuid")
+
+	// try match any with no match
+	filter = Filter{
+		Type:       "Note",
+		Key:        "TagUUID",
+		Comparison: "==",
+		Value:      "missing",
+	}
+	itemFilters = ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	res = applyNoteFilters(*gnuNote, itemFilters, []Item{*animalTag})
+	assert.False(t, res, "incorrectly matched any note by tag uuid")
 }
 
 func TestFilterNoteTitleContains(t *testing.T) {
