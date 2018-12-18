@@ -68,6 +68,8 @@ type ClientStructure interface {
 	References() []ItemReference
 	// update or insert item references
 	UpsertReferences(input []ItemReference)
+	// set references
+	SetReferences(input []ItemReference)
 	// return title
 	GetTitle() string
 	// set title
@@ -453,6 +455,12 @@ func UpdateItemRefs(i UpdateItemRefsInput) UpdateItemRefsOutput {
 	return UpdateItemRefsOutput{
 		Items: updated,
 	}
+}
+func (input *NoteContent) SetReferences(newRefs []ItemReference) {
+	input.ItemReferences = newRefs
+}
+func (input *TagContent) SetReferences(newRefs []ItemReference) {
+	input.ItemReferences = newRefs
 }
 
 func (input *TagContent) UpsertReferences(newRefs []ItemReference) {
