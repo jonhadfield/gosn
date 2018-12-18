@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var testEmailAddr = fmt.Sprintf("testuser-%s@example.com", time.Now().Format("20060102150405"))
+
 // ### server not required for following tests
 func TestGenerateEncryptedPasswordWithValidInput(t *testing.T) {
 	var testInput generateEncryptedPasswordInput
@@ -45,9 +47,8 @@ func TestSignIn(t *testing.T) {
 	}
 }
 
-func TestRegistration(t *testing.T) {
-	time.Now().Format("20060102150405")
-	emailAddr := fmt.Sprintf("testuser-%s@example.com", time.Now().Format("20060102150405"))
+func TestRegistrationAndSignInWithNewCredentials(t *testing.T) {
+	emailAddr := testEmailAddr
 	password := "secret"
 	rInput := RegisterInput{
 		Email:     emailAddr,
@@ -64,4 +65,39 @@ func TestRegistration(t *testing.T) {
 	}
 	_, err = SignIn(postRegSignInInput)
 	assert.NoError(t, err, err)
+}
+
+func TestRegistrationWithPreRegisteredEmail(t *testing.T) {
+	password := "secret"
+	rInput := RegisterInput{
+		Email:     testEmailAddr,
+		Password:  password,
+		APIServer: os.Getenv("SN_SERVER"),
+	}
+	_, err := rInput.Register()
+	assert.Error(t, err, "email is already registered")
+}
+
+func TestSignInWithInvalidEmail(t *testing.T) {
+	password := "secret"
+	sInput := SignInInput{
+		Email:     "invalid@example.com",
+		Password:  password,
+		APIServer: os.Getenv("SN_SERVER"),
+	}
+	_, err := SignIn(sInput)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid email or password")
+}
+
+func TestSignInWithBadPassword(t *testing.T) {
+	password := "invalid"
+	sInput := SignInInput{
+		Email:     "sn@lessknown.co.uk",
+		Password:  password,
+		APIServer: os.Getenv("SN_SERVER"),
+	}
+	_, err := SignIn(sInput)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid email or password")
 }
