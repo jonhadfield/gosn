@@ -194,11 +194,13 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 					for _, ref := range tag.Content.References() {
 						if item.UUID == ref.UUID {
 							matchesTag = true
-							break
 						}
 					}
+					// after checking all references in the matching ID we can move on
+					break
 				}
 			}
+
 			switch filter.Comparison {
 			case "==":
 				if matchesTag {
@@ -213,16 +215,16 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 					matchedAll = false
 				}
 			case "!=":
-				if !matchesTag {
+				if matchesTag {
 					if itemFilters.MatchAny {
-						return true
-					}
-					matchedAll = true
-				} else {
-					if !itemFilters.MatchAny {
 						return false
 					}
 					matchedAll = false
+				} else {
+					if !itemFilters.MatchAny {
+						return true
+					}
+					matchedAll = true
 				}
 			}
 
