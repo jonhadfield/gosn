@@ -41,130 +41,102 @@ func filterItems(items []Item, itemFilters ItemFilters) []Item {
 	return filtered
 }
 
+func applyNoteTextFilter(f Filter, i Item, matchAny bool) (result, matchedAll, done bool) {
+	if i.Content == nil {
+		matchedAll = false
+	} else {
+		switch f.Comparison {
+		case "~":
+			// TODO: Don't compile every time
+			r := regexp.MustCompile(f.Value)
+			text := i.Content.GetText()
+			if r.MatchString(text) {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+			} else {
+				if !matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+			}
+		case "==":
+			if i.Content.GetText() == f.Value {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+			} else {
+				if !matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+			}
+		case "!=":
+			if i.Content.GetText() != f.Value {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+			} else {
+				if !matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+			}
+		case "contains":
+			if strings.Contains(i.Content.GetText(), f.Value) {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+			} else {
+				if !matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+			}
+		}
+	}
+	return
+
+}
+
 func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
-	var matchedAll bool
+	var matchedAll, result, done bool
 	for i, filter := range itemFilters.Filters {
 		if filter.Type != "Note" {
 			continue
 		}
 		switch strings.ToLower(filter.Key) {
 		case "title": // GetTitle
-			if item.Content == nil {
-				matchedAll = false
-			} else {
-				switch filter.Comparison {
-				case "~":
-					r := regexp.MustCompile(filter.Value)
-					if r.MatchString(item.Content.GetTitle()) {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-					}
-				case "==":
-					if item.Content.GetTitle() == filter.Value {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-
-					}
-				case "!=":
-					if item.Content.GetTitle() != filter.Value {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-					}
-				case "contains":
-					if item.Content != nil && strings.Contains(item.Content.GetTitle(), filter.Value) {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-					}
-				}
+			result, matchedAll, done = applyNoteTitleFilter(filter, item, itemFilters.MatchAny)
+			if done {
+				return result
 			}
-
 		case "text": // Text
-			if item.Content == nil {
-				matchedAll = false
-			} else {
-				switch filter.Comparison {
-				case "~":
-					// TODO: Don't compile every time
-					r := regexp.MustCompile(filter.Value)
-					text := item.Content.GetText()
-					if r.MatchString(text) {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-					}
-				case "==":
-					if item.Content.GetText() == filter.Value {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-					}
-				case "!=":
-					if item.Content.GetText() != filter.Value {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-					}
-				case "contains":
-					if strings.Contains(item.Content.GetText(), filter.Value) {
-						if itemFilters.MatchAny {
-							return true
-						}
-						matchedAll = true
-					} else {
-						if !itemFilters.MatchAny {
-							return false
-						}
-						matchedAll = false
-					}
-				}
+			result, matchedAll, done = applyNoteTextFilter(filter, item, itemFilters.MatchAny)
+			if done {
+				return result
 			}
+
 		case "tagtitle": // Tag Title
 			var matchesTag bool
 			for _, tag := range tags {
@@ -262,6 +234,83 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
 		}
 	}
 	return matchedAll
+}
+
+func applyNoteTitleFilter(f Filter, i Item, matchAny bool) (result, matchedAll, done bool) {
+	if i.Content == nil {
+		matchedAll = false
+	} else {
+		switch f.Comparison {
+		case "~":
+			r := regexp.MustCompile(f.Value)
+			if r.MatchString(i.Content.GetTitle()) {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+			} else {
+				if !matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+			}
+		case "==":
+			if i.Content.GetTitle() == f.Value {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+			} else {
+				if !matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+
+			}
+		case "!=":
+			if i.Content.GetTitle() != f.Value {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+			} else {
+				if matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+			}
+		case "contains":
+			if i.Content != nil && strings.Contains(i.Content.GetTitle(), f.Value) {
+				if matchAny {
+					result = true
+					done = true
+					return
+				}
+				matchedAll = true
+
+			} else {
+				if !matchAny {
+					result = false
+					done = true
+					return
+				}
+				matchedAll = false
+			}
+		}
+	}
+	return
 }
 
 func applyTagFilters(item Item, itemFilters ItemFilters) bool {
