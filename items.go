@@ -111,6 +111,7 @@ type GetItemsInput struct {
 	Session     Session
 	SyncToken   string
 	CursorToken string
+	OutType     string
 	Filters     ItemFilters
 	BatchSize   int // number of items to retrieve
 	PageSize    int // override default number of items to request with each sync call
@@ -144,11 +145,13 @@ func resizeForRetry(in *GetItemsInput) {
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	funcName := funcNameOutputStart + "GetItems" + funcNameOutputEnd
 
+	var givao syncResponse
+
 	// retry logic is to handle responses that are too large
 	// so we can reduce number we retrieve with each sync request
 	rErr := try.Do(func(attempt int) (bool, error) {
 		var rErr error
-		output, rErr = getItems(input)
+		givao, rErr = getItemsViaAPI(input)
 		if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
 			initialSize := input.PageSize
 			resizeForRetry(&input)
@@ -161,6 +164,27 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 		log.Fatalln("error:", err)
 	}
 
+	// decrypt retrieved items
+	var dItems, dSavedItems, dUnsaved []decryptedItem
+	dItems, dSavedItems, dUnsaved, err = decryptItems(givao, input.Session.Mk, input.Session.Ak)
+	if err != nil {
+		return
+	}
+
+	output.SavedItems, err = processDecryptedItems(dSavedItems)
+	if err != nil {
+		return
+	}
+	output.Unsaved, err = processDecryptedItems(dUnsaved)
+	if err != nil {
+		return
+	}
+	output.Items, err = processDecryptedItems(dItems)
+	if err != nil {
+		return
+	}
+	output.Cursor = givao.CursorToken
+	output.SyncToken = givao.SyncToken
 	// strip any duplicates (https://github.com/standardfile/rails-engine/issues/5)
 	output.DeDupe()
 	// filter results if provided
@@ -518,8 +542,8 @@ func makeSyncRequest(session Session, reqBody []byte) (response *http.Response, 
 	return
 }
 
-func getItems(input GetItemsInput) (out GetItemsOutput, err error) {
-	funcName := funcNameOutputStart + "getItems" + funcNameOutputEnd
+func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
+	funcName := funcNameOutputStart + "getItemsViaAPI" + funcNameOutputEnd
 	// determine how many items to retrieve with each call
 	var limit int
 	switch {
@@ -566,7 +590,6 @@ func getItems(input GetItemsInput) (out GetItemsOutput, err error) {
 		return
 	}
 	if syncResp.StatusCode == 413 {
-		fmt.Println("413 err: request entity too large")
 		return out, errors.New("413: request entity too large")
 	}
 	err = syncResp.Body.Close()
@@ -580,44 +603,28 @@ func getItems(input GetItemsInput) (out GetItemsOutput, err error) {
 	if err != nil {
 		return
 	}
-
-	// decrypt retrieved items
-	var dItems, dSavedItems, dUnsaved []decryptedItem
-	dItems, dSavedItems, dUnsaved, err = decryptItems(bodyContent, input.Session.Mk, input.Session.Ak)
-	if err != nil {
-		return
-	}
-
-	out.SavedItems, err = processDecryptedItems(dSavedItems)
-	if err != nil {
-		return
-	}
-	out.Unsaved, err = processDecryptedItems(dUnsaved)
-	if err != nil {
-		return
-	}
-	out.Items, err = processDecryptedItems(dItems)
-	if err != nil {
-		return
-	}
+	out.Items = bodyContent.Items
+	out.SavedItems = bodyContent.SavedItems
+	out.Unsaved = bodyContent.Unsaved
 	out.SyncToken = bodyContent.SyncToken
-	out.Cursor = bodyContent.CursorToken
+	out.CursorToken = bodyContent.CursorToken
 	if input.BatchSize > 0 {
 		return
 	}
 
 	if bodyContent.CursorToken != "" && bodyContent.CursorToken != "null" {
-		var newOutput GetItemsOutput
+		var newOutput syncResponse
 		input.SyncToken = out.SyncToken
-		input.CursorToken = out.Cursor
+		input.CursorToken = out.CursorToken
 		input.PageSize = limit
-		newOutput, err = getItems(input)
-		out = appendItems(out, newOutput)
+		newOutput, err = getItemsViaAPI(input)
+		out.Items = append(out.Items, newOutput.Items...)
+		out.SavedItems = append(out.Items, newOutput.SavedItems...)
+		out.Unsaved = append(out.Items, newOutput.Unsaved...)
 	} else {
-
 		return out, err
 	}
-
+	out.CursorToken = ""
 	return
 }
 
@@ -772,12 +779,12 @@ func processDecryptedItems(input []decryptedItem) (output []Item, err error) {
 	return
 }
 
-func appendItems(existing, newItems GetItemsOutput) (output GetItemsOutput) {
-	output.Items = append(existing.Items, newItems.Items...)
-	output.Unsaved = append(existing.Unsaved, newItems.Unsaved...)
-	output.SavedItems = append(existing.SavedItems, newItems.SavedItems...)
-	return
-}
+//func appendItems(existing, newItems GetItemsOutput) (output GetItemsOutput) {
+//	output.Items = append(existing.Items, newItems.Items...)
+//	output.Unsaved = append(existing.Unsaved, newItems.Unsaved...)
+//	output.SavedItems = append(existing.SavedItems, newItems.SavedItems...)
+//	return
+//}
 
 func processContentModel(contentType, input string) (output ClientStructure, err error) {
 	// identify content model
