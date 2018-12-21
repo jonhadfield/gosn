@@ -57,12 +57,12 @@ func TestFilterNoteByTagUUID(t *testing.T) {
 		UUID:        gnuNoteUUID,
 		ContentType: "Note",
 	}
-	animalTag.Content.UpsertReferences([]ItemReference{gnuRef})
+	animalTag.Content.UpsertReferences(ItemReferences{gnuRef})
 	cheeseRef := ItemReference{
 		UUID:        cheeseNoteUUID,
 		ContentType: "Note",
 	}
-	foodTag.Content.UpsertReferences([]ItemReference{cheeseRef})
+	foodTag.Content.UpsertReferences(ItemReferences{cheeseRef})
 
 	animalTagUUIDFilter := Filter{
 		Type:       "Note",
@@ -108,47 +108,47 @@ func TestFilterNoteByTagUUID(t *testing.T) {
 		MatchAny: false,
 	}
 	// try match single animal (success)
-	res := applyNoteFilters(*gnuNote, animalItemFilters, []Item{*animalTag})
+	res := applyNoteFilters(*gnuNote, animalItemFilters, Items{*animalTag})
 	assert.True(t, res, "failed to match any note by tag uuid")
 
 	// try match animal note against food tag (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFilters, []Item{*foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFilters, Items{*foodTag})
 	assert.False(t, res, "incorrectly matched note by tag uuid")
 
 	// try against any of multiple filters - match any (success)
-	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyTrue, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyTrue, Items{*animalTag, *foodTag})
 	assert.True(t, res, "failed to match cheese note against any of animal or food tag")
 
 	// try against any of multiple filters - match all (failure)
-	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyFalse, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyFalse, Items{*animalTag, *foodTag})
 	assert.False(t, res, "incorrectly matched cheese note against both animal and food tag")
 
 	// try against any of multiple filters - match any (failure)
-	res = applyNoteFilters(*sportNote, animalAndFoodItemFiltersAnyFalse, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*sportNote, animalAndFoodItemFiltersAnyFalse, Items{*animalTag, *foodTag})
 	assert.False(t, res, "incorrectly matched sport note against animal and food tags")
 
 	// try against any of multiple filters - match any (success)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, []Item{*foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, Items{*foodTag})
 	assert.True(t, res, "expected true as gnu note should be negative match for food tag")
 
 	// try against any of multiple filters - match all (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, []Item{*foodTag, *animalTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, Items{*foodTag, *animalTag})
 	assert.False(t, res, "expected false as gnu note should be negative match for food tag only")
 
 	// try against any of multiple filters - match any (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, []Item{*animalTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, Items{*animalTag})
 	assert.False(t, res, "expected gnu note not to match negative animal tag")
 
 	// try against any of multiple filters - don't want note to match any of the food nor animal tags (success)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, []Item{*foodTag, *animalTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, Items{*foodTag, *animalTag})
 	assert.False(t, res, "wanted negative match against animal tag")
 
 	// try against any of multiple filters - match all (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, Items{*animalTag, *foodTag})
 	assert.False(t, res, "expected gnu note not to match negative animal tag")
 
 	// try against any of multiple filters - match all (success)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, []Item{*foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, Items{*foodTag})
 	assert.True(t, res, "expected gnu note to negative match food tag")
 }
 
@@ -170,12 +170,12 @@ func TestFilterNoteByTagTitle(t *testing.T) {
 		UUID:        gnuNoteUUID,
 		ContentType: "Note",
 	}
-	animalTag.Content.UpsertReferences([]ItemReference{gnuRef})
+	animalTag.Content.UpsertReferences(ItemReferences{gnuRef})
 	cheeseRef := ItemReference{
 		UUID:        cheeseNoteUUID,
 		ContentType: "Note",
 	}
-	foodTag.Content.UpsertReferences([]ItemReference{cheeseRef})
+	foodTag.Content.UpsertReferences(ItemReferences{cheeseRef})
 
 	animalTagUUIDFilter := Filter{
 		Type:       "Note",
@@ -221,47 +221,47 @@ func TestFilterNoteByTagTitle(t *testing.T) {
 		MatchAny: false,
 	}
 	// try match single animal (success)
-	res := applyNoteFilters(*gnuNote, animalItemFilters, []Item{*animalTag})
+	res := applyNoteFilters(*gnuNote, animalItemFilters, Items{*animalTag})
 	assert.True(t, res, "failed to match any note by tag title")
 
 	// try match animal note against food tag (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFilters, []Item{*foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFilters, Items{*foodTag})
 	assert.False(t, res, "incorrectly matched note by tag title")
 
 	// try against any of multiple filters - match any (success)
-	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyTrue, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyTrue, Items{*animalTag, *foodTag})
 	assert.True(t, res, "failed to match cheese note against any of animal or food tag")
 
 	// try against any of multiple filters - match all (failure)
-	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyFalse, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyFalse, Items{*animalTag, *foodTag})
 	assert.False(t, res, "incorrectly matched cheese note against both animal and food tag")
 
 	// try against any of multiple filters - match any (failure)
-	res = applyNoteFilters(*sportNote, animalAndFoodItemFiltersAnyFalse, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*sportNote, animalAndFoodItemFiltersAnyFalse, Items{*animalTag, *foodTag})
 	assert.False(t, res, "incorrectly matched sport note against animal and food tags")
 
 	// try against any of multiple filters - match any (success)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, []Item{*foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, Items{*foodTag})
 	assert.True(t, res, "expected true as gnu note should be negative match for food tag")
 
 	// try against any of multiple filters - match all (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, []Item{*foodTag, *animalTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, Items{*foodTag, *animalTag})
 	assert.False(t, res, "expected false as gnu note should be negative match for food tag only")
 
 	// try against any of multiple filters - match any (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, []Item{*animalTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, Items{*animalTag})
 	assert.False(t, res, "expected gnu note not to match negative animal tag")
 
 	// try against any of multiple filters - don't want note to match any of the food nor animal tags (success)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, []Item{*foodTag, *animalTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAny, Items{*foodTag, *animalTag})
 	assert.False(t, res, "wanted negative match against animal tag")
 
 	// try against any of multiple filters - match all (failure)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, []Item{*animalTag, *foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, Items{*animalTag, *foodTag})
 	assert.False(t, res, "expected gnu note not to match negative animal tag")
 
 	// try against any of multiple filters - match all (success)
-	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, []Item{*foodTag})
+	res = applyNoteFilters(*gnuNote, animalItemFiltersNegativeMatchAll, Items{*foodTag})
 	assert.True(t, res, "expected gnu note to negative match food tag")
 }
 
