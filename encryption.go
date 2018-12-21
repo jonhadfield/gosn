@@ -167,52 +167,6 @@ func getBodyContent(input []byte) (output syncResponse, err error) {
 	return
 }
 
-//
-//func decryptItems(input syncResponse, mk, ak string) (items, saved, unsaved []decryptedItem, err error) {
-//	funcName := funcNameOutputStart + "decryptItems" + funcNameOutputEnd
-//	debug(funcName, fmt.Errorf("items: %d saved: %d unsaved: %d",
-//		len(input.Items), len(input.SavedItems), len(input.Unsaved)))
-//	items, err = decryptItemSet(input.Items, mk, ak)
-//	if err != nil {
-//		return
-//	}
-//	saved, err = decryptItemSet(input.SavedItems, mk, ak)
-//	if err != nil {
-//		return
-//	}
-//	unsaved, err = decryptItemSet(input.Unsaved, mk, ak)
-//	if err != nil {
-//		return
-//	}
-//	return
-//}
-
-func decryptItemSet(input []EncryptedItem, mk, ak string) (output []decryptedItem, err error) {
-	//funcName := funcNameOutputStart + "decryptItemSet" + funcNameOutputEnd
-	for _, eItem := range input {
-		var item decryptedItem
-		if eItem.EncItemKey != "" {
-			var decryptedEncItemKey string
-			decryptedEncItemKey, err = decryptString(eItem.EncItemKey, mk, ak, eItem.UUID)
-			if err != nil {
-				return
-			}
-			itemEncryptionKey := decryptedEncItemKey[:len(decryptedEncItemKey)/2]
-			itemAuthKey := decryptedEncItemKey[len(decryptedEncItemKey)/2:]
-			var decryptedContent string
-			decryptedContent, err = decryptString(eItem.Content, itemEncryptionKey, itemAuthKey, eItem.UUID)
-			item.Content = decryptedContent
-		}
-		item.UUID = eItem.UUID
-		item.Deleted = eItem.Deleted
-		item.ContentType = eItem.ContentType
-		item.UpdatedAt = eItem.UpdatedAt
-		item.CreatedAt = eItem.CreatedAt
-		output = append(output, item)
-	}
-	return
-}
-
 func padToAESBlockSize(b []byte) []byte {
 	n := aes.BlockSize - (len(b) % aes.BlockSize)
 	pb := make([]byte, len(b)+n)

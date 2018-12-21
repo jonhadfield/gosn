@@ -89,11 +89,11 @@ type ClientStructure interface {
 }
 
 type syncResponse struct {
-	Items       []EncryptedItem `json:"retrieved_items"`
-	SavedItems  []EncryptedItem `json:"saved_items"`
-	Unsaved     []EncryptedItem `json:"unsaved"`
-	SyncToken   string          `json:"sync_token"`
-	CursorToken string          `json:"cursor_token"`
+	Items       EncryptedItems `json:"retrieved_items"`
+	SavedItems  EncryptedItems `json:"saved_items"`
+	Unsaved     EncryptedItems `json:"unsaved"`
+	SyncToken   string         `json:"sync_token"`
+	CursorToken string         `json:"cursor_token"`
 }
 
 // AppTagConfig defines expected configuration structure for making Tag related operations
@@ -121,9 +121,9 @@ type GetItemsInput struct {
 // It contains slices of items based on their state
 // see: https://standardfile.org/ for state details
 type GetItemsOutput struct {
-	Items      []EncryptedItem // items new or modified since last sync
-	SavedItems []EncryptedItem // dirty items needing resolution
-	Unsaved    []EncryptedItem // items not saved during sync
+	Items      EncryptedItems // items new or modified since last sync
+	SavedItems EncryptedItems // dirty items needing resolution
+	Unsaved    EncryptedItems // items not saved during sync
 	SyncToken  string
 	Cursor     string
 }
@@ -141,74 +141,38 @@ func resizeForRetry(in *GetItemsInput) {
 	}
 }
 
-type DecryptItemsInput struct {
-	Items      []EncryptedItem
-	SavedItems []EncryptedItem
-	Unsaved    []EncryptedItem
-	Mk         string
-	Ak         string
-}
+type EncryptedItems []EncryptedItem
 
-type DecryptItemsOutput struct {
-	Items      []decryptedItem
-	SavedItems []decryptedItem
-	Unsaved    []decryptedItem
-}
+func (i EncryptedItems) Decrypt(Mk, Ak string) (o []DecryptedItem, err error) {
+	funcName := funcNameOutputStart + "Decrypt" + funcNameOutputEnd
+	debug(funcName, fmt.Errorf("items: %d", len(i)))
 
-//
-//type decryptItemsInput struct {
-//	items      []EncryptedItem
-//	unsaved    []EncryptedItem
-//	savedItems []EncryptedItem
-//	Mk         string
-//	Ak         string
-//}
-//
-//type decryptItemsOutput struct {
-//	items      []decryptedItem
-//	unsaved    []decryptedItem
-//	savedItems []decryptedItem
-//}
+	for _, eItem := range i {
+		var item DecryptedItem
+		if eItem.EncItemKey != "" {
+			var decryptedEncItemKey string
+			decryptedEncItemKey, err = decryptString(eItem.EncItemKey, Mk, Ak, eItem.UUID)
+			if err != nil {
+				return
+			}
+			itemEncryptionKey := decryptedEncItemKey[:len(decryptedEncItemKey)/2]
+			itemAuthKey := decryptedEncItemKey[len(decryptedEncItemKey)/2:]
+			var decryptedContent string
+			decryptedContent, err = decryptString(eItem.Content, itemEncryptionKey, itemAuthKey, eItem.UUID)
+			if err != nil {
+				return
+			}
+			item.Content = decryptedContent
+		}
+		item.UUID = eItem.UUID
+		item.Deleted = eItem.Deleted
+		item.ContentType = eItem.ContentType
+		item.UpdatedAt = eItem.UpdatedAt
+		item.CreatedAt = eItem.CreatedAt
+		o = append(o, item)
+	}
 
-func DecryptItems(input DecryptItemsInput) (output DecryptItemsOutput, err error) {
-	// decrypt retrieved items
-	funcName := funcNameOutputStart + "decryptItems" + funcNameOutputEnd
-	debug(funcName, fmt.Errorf("items: %d saved: %d unsaved: %d",
-		len(input.Items), len(input.SavedItems), len(input.Unsaved)))
-	output.Items, err = decryptItemSet(input.Items, input.Mk, input.Ak)
-	if err != nil {
-		return
-	}
-	output.SavedItems, err = decryptItemSet(input.SavedItems, input.Mk, input.Ak)
-	if err != nil {
-		return
-	}
-	output.Unsaved, err = decryptItemSet(input.Unsaved, input.Mk, input.Ak)
-	if err != nil {
-		return
-	}
 	return
-	//
-	//din := decryptItemsInput{}
-	//var dItems, dSavedItems, dUnsaved []decryptedItem
-	//decryptItemsOutput{}, err = decryptItems(decryptItemsInput{})
-	//if err != nil {
-	//	return
-	//}
-	//
-	//output.SavedItems, err = ParseDecryptedItems(dSavedItems)
-	//if err != nil {
-	//	return
-	//}
-	//output.Unsaved, err = ParseDecryptedItems(dUnsaved)
-	//if err != nil {
-	//	return
-	//}
-	//output.Items, err = ParseDecryptedItems(dItems)
-	//if err != nil {
-	//	return
-	//}
-	//return
 }
 
 // GetItems retrieves items from the API using optional filters
@@ -446,7 +410,7 @@ type EncryptedItem struct {
 	UpdatedAt   string `json:"updated_at"`
 }
 
-type decryptedItem struct {
+type DecryptedItem struct {
 	UUID        string `json:"uuid"`
 	Content     string `json:"content"`
 	ContentType string `json:"content_type"`
@@ -454,6 +418,8 @@ type decryptedItem struct {
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
+
+type DecryptedItems []DecryptedItem
 
 // {
 //      "uuid": "3162fe3a-1b5b-4cf5-b88a-afcb9996b23a",
@@ -562,14 +528,14 @@ func (input *NoteContent) UpsertReferences(newRefs []ItemReference) {
 	}
 }
 
-func DeDupe(inItems, inSavedItems, inUnsaved []Item) (outItems, outSavedItems, outUnsaved []Item) {
-	outItems = DeDupeItems(inItems)
-	outSavedItems = DeDupeItems(inSavedItems)
-	outUnsaved = DeDupeItems(inUnsaved)
-	return
-}
+//func DeDupe(inItems, inSavedItems, inUnsaved []Item) (outItems, outSavedItems, outUnsaved []Item) {
+//	outItems = DeDupeItems(inItems)
+//	outSavedItems = DeDupeItems(inSavedItems)
+//	outUnsaved = DeDupeItems(inUnsaved)
+//	return
+//}
 
-func DeDupeEncrypted(inItems, inSavedItems, inUnsaved []EncryptedItem) (outItems, outSavedItems, outUnsaved []EncryptedItem) {
+func DeDupeEncrypted(inItems, inSavedItems, inUnsaved EncryptedItems) (outItems, outSavedItems, outUnsaved EncryptedItems) {
 	outItems = DeDupeEncryptedItems(inItems)
 	outSavedItems = DeDupeEncryptedItems(inSavedItems)
 	outUnsaved = DeDupeEncryptedItems(inUnsaved)
@@ -798,7 +764,7 @@ type TagContent struct {
 	AppData        AppDataContent  `json:"appData"`
 }
 
-func ParseDecryptedItems(input []decryptedItem) (output []Item, err error) {
+func ParseDecryptedItems(input []DecryptedItem) (output []Item, err error) {
 	for i := range input {
 		var processedItem Item
 		processedItem.ContentType = input[i].ContentType
