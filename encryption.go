@@ -167,25 +167,25 @@ func getBodyContent(input []byte) (output syncResponse, err error) {
 	return
 }
 
-
-func decryptItems(input syncResponse, mk, ak string) (items, saved, unsaved []decryptedItem, err error) {
-	funcName := funcNameOutputStart + "decryptItems" + funcNameOutputEnd
-	debug(funcName, fmt.Errorf("items: %d saved: %d unsaved: %d",
-		len(input.Items), len(input.SavedItems), len(input.Unsaved)))
-	items, err = decryptItemSet(input.Items, mk, ak)
-	if err != nil {
-		return
-	}
-	saved, err = decryptItemSet(input.SavedItems, mk, ak)
-	if err != nil {
-		return
-	}
-	unsaved, err = decryptItemSet(input.Unsaved, mk, ak)
-	if err != nil {
-		return
-	}
-	return
-}
+//
+//func decryptItems(input syncResponse, mk, ak string) (items, saved, unsaved []decryptedItem, err error) {
+//	funcName := funcNameOutputStart + "decryptItems" + funcNameOutputEnd
+//	debug(funcName, fmt.Errorf("items: %d saved: %d unsaved: %d",
+//		len(input.Items), len(input.SavedItems), len(input.Unsaved)))
+//	items, err = decryptItemSet(input.Items, mk, ak)
+//	if err != nil {
+//		return
+//	}
+//	saved, err = decryptItemSet(input.SavedItems, mk, ak)
+//	if err != nil {
+//		return
+//	}
+//	unsaved, err = decryptItemSet(input.Unsaved, mk, ak)
+//	if err != nil {
+//		return
+//	}
+//	return
+//}
 
 func decryptItemSet(input []EncryptedItem, mk, ak string) (output []decryptedItem, err error) {
 	//funcName := funcNameOutputStart + "decryptItemSet" + funcNameOutputEnd

@@ -121,9 +121,9 @@ type GetItemsInput struct {
 // It contains slices of items based on their state
 // see: https://standardfile.org/ for state details
 type GetItemsOutput struct {
-	Items      []Item // items new or modified since last sync
-	SavedItems []Item // dirty items needing resolution
-	Unsaved    []Item // items not saved during sync
+	Items      []EncryptedItem // items new or modified since last sync
+	SavedItems []EncryptedItem // dirty items needing resolution
+	Unsaved    []EncryptedItem // items not saved during sync
 	SyncToken  string
 	Cursor     string
 }
@@ -145,38 +145,71 @@ type DecryptItemsInput struct {
 	Items      []EncryptedItem
 	SavedItems []EncryptedItem
 	Unsaved    []EncryptedItem
-	Mk 			string
-	Ak   		string
+	Mk         string
+	Ak         string
 }
 
 type DecryptItemsOutput struct {
-	Items      []Item
-	SavedItems []Item
-	Unsaved    []Item
+	Items      []decryptedItem
+	SavedItems []decryptedItem
+	Unsaved    []decryptedItem
 }
 
-//func DecryptItems(input DecryptItemsInput) (output DecryptItemsOutput, err error) {
-//	// decrypt retrieved items
-//	var dItems, dSavedItems, dUnsaved []decryptedItem
-//	dItems, dSavedItems, dUnsaved, err = decryptItems(givao, input.Session.Mk, input.Session.Ak)
-//	if err != nil {
-//		return
-//	}
 //
-//	output.SavedItems, err = processDecryptedItems(dSavedItems)
-//	if err != nil {
-//		return
-//	}
-//	output.Unsaved, err = processDecryptedItems(dUnsaved)
-//	if err != nil {
-//		return
-//	}
-//	output.Items, err = processDecryptedItems(dItems)
-//	if err != nil {
-//		return
-//	}
-//	return
+//type decryptItemsInput struct {
+//	items      []EncryptedItem
+//	unsaved    []EncryptedItem
+//	savedItems []EncryptedItem
+//	Mk         string
+//	Ak         string
 //}
+//
+//type decryptItemsOutput struct {
+//	items      []decryptedItem
+//	unsaved    []decryptedItem
+//	savedItems []decryptedItem
+//}
+
+func DecryptItems(input DecryptItemsInput) (output DecryptItemsOutput, err error) {
+	// decrypt retrieved items
+	funcName := funcNameOutputStart + "decryptItems" + funcNameOutputEnd
+	debug(funcName, fmt.Errorf("items: %d saved: %d unsaved: %d",
+		len(input.Items), len(input.SavedItems), len(input.Unsaved)))
+	output.Items, err = decryptItemSet(input.Items, input.Mk, input.Ak)
+	if err != nil {
+		return
+	}
+	output.SavedItems, err = decryptItemSet(input.SavedItems, input.Mk, input.Ak)
+	if err != nil {
+		return
+	}
+	output.Unsaved, err = decryptItemSet(input.Unsaved, input.Mk, input.Ak)
+	if err != nil {
+		return
+	}
+	return
+	//
+	//din := decryptItemsInput{}
+	//var dItems, dSavedItems, dUnsaved []decryptedItem
+	//decryptItemsOutput{}, err = decryptItems(decryptItemsInput{})
+	//if err != nil {
+	//	return
+	//}
+	//
+	//output.SavedItems, err = ParseDecryptedItems(dSavedItems)
+	//if err != nil {
+	//	return
+	//}
+	//output.Unsaved, err = ParseDecryptedItems(dUnsaved)
+	//if err != nil {
+	//	return
+	//}
+	//output.Items, err = ParseDecryptedItems(dItems)
+	//if err != nil {
+	//	return
+	//}
+	//return
+}
 
 // GetItems retrieves items from the API using optional filters
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
@@ -201,33 +234,10 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 		log.Fatalln("error:", err)
 	}
 
-	// decrypt retrieved items
-	var dItems, dSavedItems, dUnsaved []decryptedItem
-	dItems, dSavedItems, dUnsaved, err = decryptItems(givao, input.Session.Mk, input.Session.Ak)
-	if err != nil {
-		return
-	}
-
-	output.SavedItems, err = processDecryptedItems(dSavedItems)
-	if err != nil {
-		return
-	}
-	output.Unsaved, err = processDecryptedItems(dUnsaved)
-	if err != nil {
-		return
-	}
-	output.Items, err = processDecryptedItems(dItems)
-	if err != nil {
-		return
-	}
+	output.Items, output.Unsaved, output.SavedItems = DeDupeEncrypted(givao.Items, givao.Unsaved, givao.SavedItems)
 	output.Cursor = givao.CursorToken
 	output.SyncToken = givao.SyncToken
 	// strip any duplicates (https://github.com/standardfile/rails-engine/issues/5)
-	output.DeDupe()
-	// filter results if provided
-	if len(input.Filters.Filters) > 0 {
-		output.Items = filterItems(output.Items, input.Filters)
-	}
 	debug(funcName, fmt.Errorf("sync token: %+v", stripLineBreak(output.SyncToken)))
 	return
 }
@@ -552,10 +562,18 @@ func (input *NoteContent) UpsertReferences(newRefs []ItemReference) {
 	}
 }
 
-func (input *GetItemsOutput) DeDupe() {
-	input.Items = DeDupeItems(input.Items)
-	input.SavedItems = DeDupeItems(input.SavedItems)
-	input.Unsaved = DeDupeItems(input.Unsaved)
+func DeDupe(inItems, inSavedItems, inUnsaved []Item) (outItems, outSavedItems, outUnsaved []Item) {
+	outItems = DeDupeItems(inItems)
+	outSavedItems = DeDupeItems(inSavedItems)
+	outUnsaved = DeDupeItems(inUnsaved)
+	return
+}
+
+func DeDupeEncrypted(inItems, inSavedItems, inUnsaved []EncryptedItem) (outItems, outSavedItems, outUnsaved []EncryptedItem) {
+	outItems = DeDupeEncryptedItems(inItems)
+	outSavedItems = DeDupeEncryptedItems(inSavedItems)
+	outUnsaved = DeDupeEncryptedItems(inUnsaved)
+	return
 }
 
 func makeSyncRequest(session Session, reqBody []byte) (response *http.Response, err error) {
@@ -780,7 +798,7 @@ type TagContent struct {
 	AppData        AppDataContent  `json:"appData"`
 }
 
-func processDecryptedItems(input []decryptedItem) (output []Item, err error) {
+func ParseDecryptedItems(input []decryptedItem) (output []Item, err error) {
 	for i := range input {
 		var processedItem Item
 		processedItem.ContentType = input[i].ContentType
@@ -838,6 +856,19 @@ func processContentModel(contentType, input string) (output ClientStructure, err
 		return &tagContent, err
 	}
 	return
+}
+
+// DeDupeEncryptedItems removes any duplicates from a list of items
+func DeDupeEncryptedItems(input []EncryptedItem) []EncryptedItem {
+	var encountered []string
+	var deDuped []EncryptedItem
+	for i := range input {
+		if !stringInSlice(input[i].UUID, encountered, true) {
+			deDuped = append(deDuped, input[i])
+		}
+		encountered = append(encountered, input[i].UUID)
+	}
+	return deDuped
 }
 
 // DeDupeItems removes any duplicates from a list of items
