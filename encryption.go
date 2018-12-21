@@ -46,7 +46,10 @@ func decryptString(stringToDecrypt, encryptionKey, authKey, uuid string) (output
 		return
 	}
 	localAuthHasher := hmac.New(sha256.New, deHexedAuthKey)
-	localAuthHasher.Write([]byte(stringToAuth))
+	_, err = localAuthHasher.Write([]byte(stringToAuth))
+	if err != nil {
+		return
+	}
 
 	localAuthHash := hex.EncodeToString(localAuthHasher.Sum(nil))
 
@@ -131,7 +134,10 @@ func encryptString(stringToEncrypt, encryptionKey, authKey, uuid string, IVOverr
 	stringToAuth := fmt.Sprintf("003:%s:%s:%s", uuid, IVString, string(cipherText))
 
 	localAuthHasher := hmac.New(sha256.New, deHexedAuthKey)
-	localAuthHasher.Write([]byte(stringToAuth))
+	_, err = localAuthHasher.Write([]byte(stringToAuth))
+	if err != nil {
+		return
+	}
 
 	localAuthHash := hex.EncodeToString(localAuthHasher.Sum(nil))
 
