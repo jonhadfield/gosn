@@ -89,9 +89,9 @@ type ClientStructure interface {
 }
 
 type syncResponse struct {
-	Items       []encryptedItem `json:"retrieved_items"`
-	SavedItems  []encryptedItem `json:"saved_items"`
-	Unsaved     []encryptedItem `json:"unsaved"`
+	Items       []EncryptedItem `json:"retrieved_items"`
+	SavedItems  []EncryptedItem `json:"saved_items"`
+	Unsaved     []EncryptedItem `json:"unsaved"`
 	SyncToken   string          `json:"sync_token"`
 	CursorToken string          `json:"cursor_token"`
 }
@@ -140,6 +140,43 @@ func resizeForRetry(in *GetItemsInput) {
 		in.PageSize = int(math.Ceil(float64(PageSize) * retryScaleFactor))
 	}
 }
+
+type DecryptItemsInput struct {
+	Items      []EncryptedItem
+	SavedItems []EncryptedItem
+	Unsaved    []EncryptedItem
+	Mk 			string
+	Ak   		string
+}
+
+type DecryptItemsOutput struct {
+	Items      []Item
+	SavedItems []Item
+	Unsaved    []Item
+}
+
+//func DecryptItems(input DecryptItemsInput) (output DecryptItemsOutput, err error) {
+//	// decrypt retrieved items
+//	var dItems, dSavedItems, dUnsaved []decryptedItem
+//	dItems, dSavedItems, dUnsaved, err = decryptItems(givao, input.Session.Mk, input.Session.Ak)
+//	if err != nil {
+//		return
+//	}
+//
+//	output.SavedItems, err = processDecryptedItems(dSavedItems)
+//	if err != nil {
+//		return
+//	}
+//	output.Unsaved, err = processDecryptedItems(dUnsaved)
+//	if err != nil {
+//		return
+//	}
+//	output.Items, err = processDecryptedItems(dItems)
+//	if err != nil {
+//		return
+//	}
+//	return
+//}
 
 // GetItems retrieves items from the API using optional filters
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
@@ -246,7 +283,7 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 		return
 	}
 
-	var encryptedItems []encryptedItem
+	var encryptedItems []EncryptedItem
 	encryptedItems, err = encryptItems(input.Items, input.Session.Mk, input.Session.Ak)
 	if err != nil {
 		return
@@ -254,7 +291,7 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 
 	// for each page size, send to push and get response
 	syncToken := stripLineBreak(input.SyncToken)
-	var savedItems []encryptedItem
+	var savedItems []EncryptedItem
 
 	// put items in big chunks, default being page size
 	for x := 0; x < len(encryptedItems); x += PageSize {
@@ -286,7 +323,7 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 				var encItemJSON []byte
 				itemsToPut := encryptedItems[subChunkStart : subChunkEnd+1]
 				encItemJSON, _ = json.Marshal(itemsToPut)
-				var s []encryptedItem
+				var s []EncryptedItem
 				s, syncToken, rErr = putChunk(input.Session, encItemJSON)
 				if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
 					subChunkEnd = resizePutForRetry(subChunkStart, subChunkEnd, len(encItemJSON))
@@ -349,7 +386,7 @@ func resizePutForRetry(start, end, numBytes int) int {
 	return end
 }
 
-func putChunk(session Session, encItemJSON []byte) (savedItems []encryptedItem, syncToken string, err error) {
+func putChunk(session Session, encItemJSON []byte) (savedItems []EncryptedItem, syncToken string, err error) {
 	reqBody := []byte(`{"items":` + string(encItemJSON) +
 		`,"sync_token":"` + stripLineBreak(syncToken) + `"}`)
 	var syncResp *http.Response
@@ -389,7 +426,7 @@ func putChunk(session Session, encItemJSON []byte) (savedItems []encryptedItem, 
 	return
 }
 
-type encryptedItem struct {
+type EncryptedItem struct {
 	UUID        string `json:"uuid"`
 	Content     string `json:"content"`
 	ContentType string `json:"content_type"`
@@ -439,7 +476,7 @@ type decryptedItem struct {
 //      "created_at": "2016-12-16T17:13:20.000Z"
 //    }
 
-//func (item encryptedItem) Export() (string, error) {
+//func (item EncryptedItem) Export() (string, error) {
 //	var sb strings.Builder
 //	sb.WriteString(fmt.Sprintf("\"uuid\": \"%s\",", item.UUID))
 //	sb.WriteString(fmt.Sprintf("\"content_type\": \"%s\",", item.ContentType))

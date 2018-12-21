@@ -167,6 +167,7 @@ func getBodyContent(input []byte) (output syncResponse, err error) {
 	return
 }
 
+
 func decryptItems(input syncResponse, mk, ak string) (items, saved, unsaved []decryptedItem, err error) {
 	funcName := funcNameOutputStart + "decryptItems" + funcNameOutputEnd
 	debug(funcName, fmt.Errorf("items: %d saved: %d unsaved: %d",
@@ -186,7 +187,7 @@ func decryptItems(input syncResponse, mk, ak string) (items, saved, unsaved []de
 	return
 }
 
-func decryptItemSet(input []encryptedItem, mk, ak string) (output []decryptedItem, err error) {
+func decryptItemSet(input []EncryptedItem, mk, ak string) (output []decryptedItem, err error) {
 	//funcName := funcNameOutputStart + "decryptItemSet" + funcNameOutputEnd
 	for _, eItem := range input {
 		var item decryptedItem
@@ -220,18 +221,18 @@ func padToAESBlockSize(b []byte) []byte {
 	return pb
 }
 
-func encryptItems(decItems []Item, mk, ak string) (encryptedItems []encryptedItem, err error) {
+func encryptItems(decItems []Item, mk, ak string) (encryptedItems []EncryptedItem, err error) {
 	funcName := funcNameOutputStart + "encryptItems" + funcNameOutputEnd
 	debug(funcName, fmt.Errorf("encrypting %d items", len(decItems)))
 	for _, decItem := range decItems {
-		var e encryptedItem
+		var e EncryptedItem
 		e, err = encryptItem(decItem, mk, ak)
 		encryptedItems = append(encryptedItems, e)
 	}
 	return
 }
 
-func encryptItem(item Item, mk, ak string) (encryptedItem encryptedItem, err error) {
+func encryptItem(item Item, mk, ak string) (encryptedItem EncryptedItem, err error) {
 	encryptedItem.UpdatedAt = item.UpdatedAt
 	encryptedItem.CreatedAt = item.CreatedAt
 	encryptedItem.Deleted = item.Deleted
