@@ -65,11 +65,11 @@ func NewTagContent() *TagContent {
 
 // ClientStructure defines behaviour of an Item's content entry
 type ClientStructure interface {
-	References() []ItemReference
+	References() ItemReferences
 	// update or insert item references
-	UpsertReferences(input []ItemReference)
+	UpsertReferences(input ItemReferences)
 	// set references
-	SetReferences(input []ItemReference)
+	SetReferences(input ItemReferences)
 	// return title
 	GetTitle() string
 	// set title
@@ -112,9 +112,9 @@ type GetItemsInput struct {
 	SyncToken   string
 	CursorToken string
 	OutType     string
-	Filters     ItemFilters
-	BatchSize   int // number of items to retrieve
-	PageSize    int // override default number of items to request with each sync call
+	//Filters     ItemFilters
+	BatchSize int // number of items to retrieve
+	PageSize  int // override default number of items to request with each sync call
 }
 
 // GetItemsOutput defines the output from retrieving items
@@ -143,7 +143,7 @@ func resizeForRetry(in *GetItemsInput) {
 
 type EncryptedItems []EncryptedItem
 
-func (i EncryptedItems) Decrypt(Mk, Ak string) (o []DecryptedItem, err error) {
+func (i EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
 	funcName := funcNameOutputStart + "Decrypt" + funcNameOutputEnd
 	debug(funcName, fmt.Errorf("items: %d", len(i)))
 
@@ -208,7 +208,7 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 
 // PutItemsInput defines the input used to put items
 type PutItemsInput struct {
-	Items     []Item
+	Items     Items
 	SyncToken string
 	Session   Session
 }
@@ -467,18 +467,18 @@ type DecryptedItems []DecryptedItem
 //}
 
 type UpdateItemRefsInput struct {
-	Items []Item // Tags
-	ToRef []Item // Items To Reference
+	Items Items // Tags
+	ToRef Items // Items To Reference
 }
 
 type UpdateItemRefsOutput struct {
-	Items []Item // Tags
+	Items Items // Tags
 }
 
 func UpdateItemRefs(i UpdateItemRefsInput) UpdateItemRefsOutput {
-	var updated []Item // updated tags
+	var updated Items // updated tags
 	for _, item := range i.Items {
-		var refs []ItemReference
+		var refs ItemReferences
 		for _, tr := range i.ToRef {
 			ref := ItemReference{
 				UUID:        tr.UUID,
@@ -493,14 +493,14 @@ func UpdateItemRefs(i UpdateItemRefsInput) UpdateItemRefsOutput {
 		Items: updated,
 	}
 }
-func (input *NoteContent) SetReferences(newRefs []ItemReference) {
+func (input *NoteContent) SetReferences(newRefs ItemReferences) {
 	input.ItemReferences = newRefs
 }
-func (input *TagContent) SetReferences(newRefs []ItemReference) {
+func (input *TagContent) SetReferences(newRefs ItemReferences) {
 	input.ItemReferences = newRefs
 }
 
-func (input *TagContent) UpsertReferences(newRefs []ItemReference) {
+func (input *TagContent) UpsertReferences(newRefs ItemReferences) {
 	for _, newRef := range newRefs {
 		var found bool
 		for _, existingRef := range input.ItemReferences {
@@ -514,7 +514,7 @@ func (input *TagContent) UpsertReferences(newRefs []ItemReference) {
 	}
 }
 
-func (input *NoteContent) UpsertReferences(newRefs []ItemReference) {
+func (input *NoteContent) UpsertReferences(newRefs ItemReferences) {
 	for _, newRef := range newRefs {
 		var found bool
 		for _, existingRef := range input.ItemReferences {
@@ -527,13 +527,6 @@ func (input *NoteContent) UpsertReferences(newRefs []ItemReference) {
 		}
 	}
 }
-
-//func DeDupe(inItems, inSavedItems, inUnsaved []Item) (outItems, outSavedItems, outUnsaved []Item) {
-//	outItems = DeDupeItems(inItems)
-//	outSavedItems = DeDupeItems(inSavedItems)
-//	outUnsaved = DeDupeItems(inUnsaved)
-//	return
-//}
 
 func DeDupeEncrypted(inItems, inSavedItems, inUnsaved EncryptedItems) (outItems, outSavedItems, outUnsaved EncryptedItems) {
 	outItems = DeDupeEncryptedItems(inItems)
@@ -665,10 +658,10 @@ type AppDataContent struct {
 }
 
 type NoteContent struct {
-	Title          string          `json:"title"`
-	Text           string          `json:"text"`
-	ItemReferences []ItemReference `json:"references"`
-	AppData        AppDataContent  `json:"appData"`
+	Title          string         `json:"title"`
+	Text           string         `json:"text"`
+	ItemReferences ItemReferences `json:"references"`
+	AppData        AppDataContent `json:"appData"`
 }
 
 func (input *NoteContent) GetUpdateTime() (time.Time, error) {
@@ -732,8 +725,8 @@ func (input *TagContent) GetTitle() string {
 	return input.Title
 }
 
-func (input *TagContent) References() []ItemReference {
-	var output []ItemReference
+func (input *TagContent) References() ItemReferences {
+	var output ItemReferences
 	return append(output, input.ItemReferences...)
 }
 
@@ -753,18 +746,58 @@ func (input *TagContent) SetAppData(data AppDataContent) {
 	input.AppData = data
 }
 
-func (input *NoteContent) References() []ItemReference {
-	var output []ItemReference
+func (input *NoteContent) References() ItemReferences {
+	var output ItemReferences
 	return append(output, input.ItemReferences...)
 }
 
 type TagContent struct {
-	Title          string          `json:"title"`
-	ItemReferences []ItemReference `json:"references"`
-	AppData        AppDataContent  `json:"appData"`
+	Title          string         `json:"title"`
+	ItemReferences ItemReferences `json:"references"`
+	AppData        AppDataContent `json:"appData"`
 }
 
-func ParseDecryptedItems(input []DecryptedItem) (output []Item, err error) {
+type ItemReferences []ItemReference
+
+type Items []Item
+
+func (i DecryptedItems) Parse() (o Items, err error) {
+	for x := range i {
+		var p Item
+		p.ContentType = i[x].ContentType
+		if !i[x].Deleted {
+			p.Content, err = processContentModel(i[x].ContentType, i[x].Content)
+			if err != nil {
+				return
+			}
+		}
+		var cAt, uAt time.Time
+		cAt, err = time.Parse(timeLayout, i[x].CreatedAt)
+		if err != nil {
+			return
+		}
+		p.CreatedAt = cAt.Format(timeLayout)
+		uAt, err = time.Parse(timeLayout, i[x].UpdatedAt)
+		if err != nil {
+			return
+		}
+		p.UpdatedAt = uAt.Format(timeLayout)
+		p.Deleted = i[x].Deleted
+		p.UUID = i[x].UUID
+		if p.Content != nil {
+			if p.Content.GetTitle() != "" {
+				p.ContentSize += len(p.Content.GetTitle())
+			}
+			if p.Content.GetText() != "" {
+				p.ContentSize += len(p.Content.GetText())
+			}
+		}
+		o = append(o, p)
+	}
+	return
+}
+
+func ParseDecryptedItems(input DecryptedItems) (output Items, err error) {
 	for i := range input {
 		var processedItem Item
 		processedItem.ContentType = input[i].ContentType
@@ -825,7 +858,7 @@ func processContentModel(contentType, input string) (output ClientStructure, err
 }
 
 // DeDupeEncryptedItems removes any duplicates from a list of items
-func DeDupeEncryptedItems(input []EncryptedItem) []EncryptedItem {
+func DeDupeEncryptedItems(input EncryptedItems) EncryptedItems {
 	var encountered []string
 	var deDuped []EncryptedItem
 	for i := range input {
@@ -838,9 +871,9 @@ func DeDupeEncryptedItems(input []EncryptedItem) []EncryptedItem {
 }
 
 // DeDupeItems removes any duplicates from a list of items
-func DeDupeItems(input []Item) []Item {
+func DeDupeItems(input Items) Items {
 	var encountered []string
-	var deDuped []Item
+	var deDuped Items
 	for i := range input {
 		if !stringInSlice(input[i].UUID, encountered, true) {
 			deDuped = append(deDuped, input[i])

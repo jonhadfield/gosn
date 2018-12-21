@@ -18,9 +18,9 @@ type Filter struct {
 	Value      string
 }
 
-func filterItems(items []Item, itemFilters ItemFilters) []Item {
-	var filtered []Item
-	var tags []Item
+func FilterItems(items Items, itemFilters ItemFilters) Items {
+	var filtered Items
+	var tags Items
 	for _, i := range items {
 		if i.ContentType == "Tag" {
 			tags = append(tags, i)
@@ -119,7 +119,7 @@ func applyNoteTextFilter(f Filter, i Item, matchAny bool) (result, matchedAll, d
 
 }
 
-func applyNoteTagTitleFilter(f Filter, i Item, tags []Item, matchAny bool) (result, matchedAll, done bool) {
+func applyNoteTagTitleFilter(f Filter, i Item, tags Items, matchAny bool) (result, matchedAll, done bool) {
 	var matchesTag bool
 	for _, tag := range tags {
 		if tag.Content != nil && tag.Content.GetTitle() == f.Value {
@@ -148,7 +148,7 @@ func applyNoteTagTitleFilter(f Filter, i Item, tags []Item, matchAny bool) (resu
 	return
 }
 
-func applyNoteTagUUIDFilter(f Filter, i Item, tags []Item, matchAny bool) (result, matchedAll, done bool) {
+func applyNoteTagUUIDFilter(f Filter, i Item, tags Items, matchAny bool) (result, matchedAll, done bool) {
 	var matchesTag bool
 	for _, tag := range tags {
 		if tag.UUID == f.Value {
@@ -199,7 +199,7 @@ func applyNoteTagUUIDFilter(f Filter, i Item, tags []Item, matchAny bool) (resul
 	return
 }
 
-func applyNoteFilters(item Item, itemFilters ItemFilters, tags []Item) bool {
+func applyNoteFilters(item Item, itemFilters ItemFilters, tags Items) bool {
 	var matchedAll, result, done bool
 	for i, filter := range itemFilters.Filters {
 		if filter.Type != "Note" {

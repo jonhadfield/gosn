@@ -181,7 +181,7 @@ func padToAESBlockSize(b []byte) []byte {
 	return pb
 }
 
-func encryptItems(decItems []Item, mk, ak string) (encryptedItems []EncryptedItem, err error) {
+func encryptItems(decItems Items, mk, ak string) (encryptedItems []EncryptedItem, err error) {
 	funcName := funcNameOutputStart + "encryptItems" + funcNameOutputEnd
 	debug(funcName, fmt.Errorf("encrypting %d items", len(decItems)))
 	for _, decItem := range decItems {
