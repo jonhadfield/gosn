@@ -178,13 +178,13 @@ func (ei EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	funcName := funcNameOutputStart + "GetItems" + funcNameOutputEnd
 
-	var givao syncResponse
+	var sResp syncResponse
 
 	// retry logic is to handle responses that are too large
 	// so we can reduce number we retrieve with each sync request
 	rErr := try.Do(func(attempt int) (bool, error) {
 		var rErr error
-		givao, rErr = getItemsViaAPI(input)
+		sResp, rErr = getItemsViaAPI(input)
 		if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
 			initialSize := input.PageSize
 			resizeForRetry(&input)
@@ -197,14 +197,14 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 		log.Fatalln("error:", err)
 	}
 
-	output.Items = givao.Items
+	output.Items = sResp.Items
 	output.Items.DeDupe()
-	output.Unsaved = givao.Unsaved
+	output.Unsaved = sResp.Unsaved
 	output.Unsaved.DeDupe()
-	output.SavedItems = givao.SavedItems
+	output.SavedItems = sResp.SavedItems
 	output.SavedItems.DeDupe()
-	output.Cursor = givao.CursorToken
-	output.SyncToken = givao.SyncToken
+	output.Cursor = sResp.CursorToken
+	output.SyncToken = sResp.SyncToken
 	// strip any duplicates (https://github.com/standardfile/rails-engine/issues/5)
 	debug(funcName, fmt.Errorf("sync token: %+v", stripLineBreak(output.SyncToken)))
 	return
@@ -212,7 +212,7 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 
 // PutItemsInput defines the input used to put items
 type PutItemsInput struct {
-	Items     Items
+	Items     EncryptedItems
 	SyncToken string
 	Session   Session
 }
@@ -222,25 +222,25 @@ type PutItemsOutput struct {
 	ResponseBody syncResponse
 }
 
-func validateInput(input PutItemsInput) error {
+func (i *Items) Validate() error {
 	var updatedTime time.Time
 	var err error
 	// TODO finish item validation
-	for _, inputItem := range input.Items {
+	for _, item := range *i {
 		// validate content if being added
-		if !inputItem.Deleted {
-			if stringInSlice(inputItem.ContentType, []string{"Tag", "Note"}, true) {
-				updatedTime, err = inputItem.Content.GetUpdateTime()
+		if !item.Deleted {
+			if stringInSlice(item.ContentType, []string{"Tag", "Note"}, true) {
+				updatedTime, err = item.Content.GetUpdateTime()
 				switch {
-				case inputItem.Content.GetTitle() == "":
+				case item.Content.GetTitle() == "":
 					err = fmt.Errorf("failed to create \"%s\" due to missing title: \"%s\"",
-						inputItem.ContentType, inputItem.UUID)
+						item.ContentType, item.UUID)
 				case updatedTime.IsZero():
 					err = fmt.Errorf("failed to create \"%s\" due to missing content updated time: \"%s\"",
-						inputItem.ContentType, inputItem.Content.GetTitle())
-				case inputItem.CreatedAt == "":
+						item.ContentType, item.Content.GetTitle())
+				case item.CreatedAt == "":
 					err = fmt.Errorf("failed to create \"%s\" due to missing created at date: \"%s\"",
-						inputItem.ContentType, inputItem.Content.GetTitle())
+						item.ContentType, item.Content.GetTitle())
 				}
 				if err != nil {
 					return err
@@ -251,33 +251,27 @@ func validateInput(input PutItemsInput) error {
 	return err
 }
 
+func (i *Items) Encrypt(Mk, Ak string) (e EncryptedItems, err error) {
+	e, err = encryptItems(i, Mk, Ak)
+	return
+}
+
 // PutItems validates and then syncs items via API
-func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
+func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 	funcName := funcNameOutputStart + "PutItems" + funcNameOutputEnd
-	debug(funcName, fmt.Sprintf("putting %d items", len(input.Items)))
-
-	err = validateInput(input)
-	if err != nil {
-		return
-	}
-
-	var encryptedItems []EncryptedItem
-	encryptedItems, err = encryptItems(input.Items, input.Session.Mk, input.Session.Ak)
-	if err != nil {
-		return
-	}
+	debug(funcName, fmt.Sprintf("putting %d items", len(i.Items)))
 
 	// for each page size, send to push and get response
-	syncToken := stripLineBreak(input.SyncToken)
+	syncToken := stripLineBreak(i.SyncToken)
 	var savedItems []EncryptedItem
 
 	// put items in big chunks, default being page size
-	for x := 0; x < len(encryptedItems); x += PageSize {
+	for x := 0; x < len(i.Items); x += PageSize {
 		var finalChunk bool
 		var lastItemInChunkIndex int
 		// if current big chunk > num encrypted items then it's the last
-		if x+PageSize >= len(encryptedItems) {
-			lastItemInChunkIndex = len(encryptedItems) - 1
+		if x+PageSize >= len(i.Items) {
+			lastItemInChunkIndex = len(i.Items) - 1
 			finalChunk = true
 		} else {
 			lastItemInChunkIndex = x + PageSize
@@ -285,7 +279,7 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 		debug(funcName, fmt.Sprintf("putting items: %d to %d", x+1, lastItemInChunkIndex+1))
 
 		bigChunkSize := (lastItemInChunkIndex - x) + 1
-		fullChunk := encryptedItems[x : lastItemInChunkIndex+1]
+		fullChunk := i.Items[x : lastItemInChunkIndex+1]
 		var subChunkStart, subChunkEnd int
 		subChunkStart = x
 		subChunkEnd = lastItemInChunkIndex
@@ -299,10 +293,10 @@ func PutItems(input PutItemsInput) (output PutItemsOutput, err error) {
 				var rErr error
 				// if chunk is too big to put then try with smaller chunk
 				var encItemJSON []byte
-				itemsToPut := encryptedItems[subChunkStart : subChunkEnd+1]
+				itemsToPut := i.Items[subChunkStart : subChunkEnd+1]
 				encItemJSON, _ = json.Marshal(itemsToPut)
 				var s []EncryptedItem
-				s, syncToken, rErr = putChunk(input.Session, encItemJSON)
+				s, syncToken, rErr = putChunk(i.Session, encItemJSON)
 				if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
 					subChunkEnd = resizePutForRetry(subChunkStart, subChunkEnd, len(encItemJSON))
 				}

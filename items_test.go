@@ -83,9 +83,10 @@ func _createNotes(session Session, input map[string]string) (output PutItemsOutp
 		newNote.Content = newNoteContent
 		newNotes = append(newNotes, *newNote)
 	}
+	eNotes, _ := newNotes.Encrypt(session.Mk, session.Ak)
 	putItemsInput := PutItemsInput{
 		Session: session,
-		Items:   newNotes,
+		Items:   eNotes,
 	}
 	output, err = PutItems(putItemsInput)
 	if err != nil {
@@ -104,9 +105,11 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 		newTagContent.SetUpdateTime(time.Now())
 		newTag.Content = newTagContent
 
+		dItems := Items{*newTag}
+		eItems, _ := dItems.Encrypt(session.Mk, session.Ak)
 		putItemsInput := PutItemsInput{
 			Session: session,
-			Items:   Items{*newTag},
+			Items:   eItems,
 		}
 		output, err = PutItems(putItemsInput)
 		if err != nil {
@@ -158,9 +161,10 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 		toDel = append(toDel, md)
 	}
 
+	eToDel, _ := toDel.Encrypt(session.Mk, session.Ak)
 	putItemsInput := PutItemsInput{
 		Session: *session,
-		Items:   toDel,
+		Items:   eToDel,
 	}
 	_, err = PutItems(putItemsInput)
 	if err != nil {
@@ -230,11 +234,15 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 		Text:           randPara,
 		ItemReferences: nil,
 	}
+
 	newNoteContent.SetUpdateTime(time.Now())
 	newNote := NewNote()
 	newNote.Content = &newNoteContent
+	dItems := Items{*newNote}
+	assert.NoError(t, dItems.Validate())
+	eItems, _ := dItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
 	putItemsInput := PutItemsInput{
-		Items:   Items{*newNote},
+		Items:   eItems,
 		Session: sOutput.Session,
 	}
 	var putItemsOutput PutItemsOutput
@@ -284,9 +292,12 @@ func TestNoteTagging(t *testing.T) {
 
 	// create base notes
 	newNotes := genNotes(100, 2)
+	assert.NoError(t, newNotes.Validate())
+	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+
 	pii := PutItemsInput{
 		Session: sOutput.Session,
-		Items:   newNotes,
+		Items:   eItems,
 	}
 	_, err = PutItems(pii)
 	if err != nil {
@@ -355,9 +366,10 @@ func TestNoteTagging(t *testing.T) {
 	allItems = append(allItems, *dogNote, *cheeseNote, *gnuNote)
 	allItems = append(allItems, updatedAnimalTagsOutput.Items...)
 	allItems = append(allItems, updatedFoodTagsOutput.Items...)
-
+	assert.NoError(t, allItems.Validate())
+	eItems, _ = allItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
 	pii = PutItemsInput{
-		Items:   allItems,
+		Items:   eItems,
 		Session: sOutput.Session,
 	}
 	_, err = PutItems(pii)
@@ -674,9 +686,11 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 	defer cleanup(&sOutput.Session)
 
 	newNotes := genNotes(200, 2)
+	assert.NoError(t, newNotes.Validate())
+	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
-		Items:   newNotes,
+		Items:   eItems,
 	}
 	_, err = PutItems(pii)
 	if err != nil {
@@ -731,9 +745,11 @@ func TestCreateAndGet301Notes(t *testing.T) {
 	defer cleanup(&sOutput.Session)
 
 	newNotes := genNotes(numNotes, 10)
+	assert.NoError(t, newNotes.Validate())
+	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
-		Items:   newNotes,
+		Items:   eItems,
 	}
 	_, err = PutItems(pii)
 	if err != nil {
