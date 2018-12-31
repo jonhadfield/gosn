@@ -222,6 +222,25 @@ func cleanup(session *Session) {
 	}
 }
 
+func TestTagComparison(t *testing.T) {
+	xUUID := GenUUID()
+	one := NewTag()
+	one.UUID = xUUID
+	one.Content = NewTagContent()
+	two := NewTag()
+	two.Content = NewTagContent()
+	two.UUID = xUUID
+	assert.True(t, one.Equals(*two))
+
+	one.Content.SetTitle("one")
+	two.Content.SetTitle("one")
+	assert.True(t, one.Equals(*two))
+
+	one.Content.SetTitle("one")
+	two.Content.SetTitle("two")
+	assert.False(t, one.Equals(*two))
+}
+
 func TestPutItemsAddSingleNote(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
@@ -801,6 +820,9 @@ func TestCreateAndGet301Notes(t *testing.T) {
 		}
 	}
 }
+
+
+
 
 func genRandomText(paragraphs int) string {
 	var strBuilder strings.Builder

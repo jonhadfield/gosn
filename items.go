@@ -491,37 +491,37 @@ func UpdateItemRefs(i UpdateItemRefsInput) UpdateItemRefsOutput {
 		Items: updated,
 	}
 }
-func (input *NoteContent) SetReferences(newRefs ItemReferences) {
-	input.ItemReferences = newRefs
+func (noteContent *NoteContent) SetReferences(newRefs ItemReferences) {
+	noteContent.ItemReferences = newRefs
 }
-func (input *TagContent) SetReferences(newRefs ItemReferences) {
-	input.ItemReferences = newRefs
+func (tagContent *TagContent) SetReferences(newRefs ItemReferences) {
+	tagContent.ItemReferences = newRefs
 }
 
-func (input *TagContent) UpsertReferences(newRefs ItemReferences) {
+func (tagContent *TagContent) UpsertReferences(newRefs ItemReferences) {
 	for _, newRef := range newRefs {
 		var found bool
-		for _, existingRef := range input.ItemReferences {
+		for _, existingRef := range tagContent.ItemReferences {
 			if existingRef.UUID == newRef.UUID {
 				found = true
 			}
 		}
 		if !found {
-			input.ItemReferences = append(input.ItemReferences, newRef)
+			tagContent.ItemReferences = append(tagContent.ItemReferences, newRef)
 		}
 	}
 }
 
-func (input *NoteContent) UpsertReferences(newRefs ItemReferences) {
+func (noteContent *NoteContent) UpsertReferences(newRefs ItemReferences) {
 	for _, newRef := range newRefs {
 		var found bool
-		for _, existingRef := range input.ItemReferences {
+		for _, existingRef := range noteContent.ItemReferences {
 			if existingRef.UUID == newRef.UUID {
 				found = true
 			}
 		}
 		if !found {
-			input.ItemReferences = append(input.ItemReferences, newRef)
+			noteContent.ItemReferences = append(noteContent.ItemReferences, newRef)
 		}
 	}
 }
@@ -655,91 +655,91 @@ type NoteContent struct {
 	AppData        AppDataContent `json:"appData"`
 }
 
-func (input *NoteContent) GetUpdateTime() (time.Time, error) {
-	if input.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
+func (noteContent *NoteContent) GetUpdateTime() (time.Time, error) {
+	if noteContent.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
 		return time.Time{}, fmt.Errorf("notset")
 	}
-	return time.Parse(timeLayout, input.AppData.OrgStandardNotesSN.ClientUpdatedAt)
+	return time.Parse(timeLayout, noteContent.AppData.OrgStandardNotesSN.ClientUpdatedAt)
 }
 
-func (input *TagContent) GetUpdateTime() (time.Time, error) {
-	if input.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
+func (tagContent *TagContent) GetUpdateTime() (time.Time, error) {
+	if tagContent.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
 		return time.Time{}, fmt.Errorf("notset")
 	}
-	return time.Parse(timeLayout, input.AppData.OrgStandardNotesSN.ClientUpdatedAt)
+	return time.Parse(timeLayout, tagContent.AppData.OrgStandardNotesSN.ClientUpdatedAt)
 
 }
 
-func (input *NoteContent) SetUpdateTime(uTime time.Time) {
-	input.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
+func (noteContent *NoteContent) SetUpdateTime(uTime time.Time) {
+	noteContent.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
 }
 
-func (input *TagContent) SetUpdateTime(uTime time.Time) {
-	input.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
+func (tagContent *TagContent) SetUpdateTime(uTime time.Time) {
+	tagContent.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
 }
 
-func (input *NoteContent) GetTitle() string {
-	return input.Title
+func (noteContent *NoteContent) GetTitle() string {
+	return noteContent.Title
 }
 
-func (input *NoteContent) SetTitle(title string) {
-	input.Title = title
+func (noteContent *NoteContent) SetTitle(title string) {
+	noteContent.Title = title
 }
 
-func (input *TagContent) SetTitle(title string) {
-	input.Title = title
+func (tagContent *TagContent) SetTitle(title string) {
+	tagContent.Title = title
 }
 
-func (input *NoteContent) GetText() string {
-	return input.Text
+func (noteContent *NoteContent) GetText() string {
+	return noteContent.Text
 }
 
-func (input *NoteContent) SetText(text string) {
-	input.Text = text
+func (noteContent *NoteContent) SetText(text string) {
+	noteContent.Text = text
 }
 
-func (input *TagContent) GetText() string {
+func (tagContent *TagContent) GetText() string {
 	// Tags only have titles, so empty string
 	return ""
 }
 
-func (input *TagContent) SetText(text string) {
+func (tagContent *TagContent) SetText(text string) {
 
 }
 
-func (input *TagContent) TextContains(findString string, matchCase bool) bool {
+func (tagContent *TagContent) TextContains(findString string, matchCase bool) bool {
 	// Tags only have titles, so always false
 	return false
 }
 
-func (input *TagContent) GetTitle() string {
-	return input.Title
+func (tagContent *TagContent) GetTitle() string {
+	return tagContent.Title
 }
 
-func (input *TagContent) References() ItemReferences {
+func (tagContent *TagContent) References() ItemReferences {
 	var output ItemReferences
-	return append(output, input.ItemReferences...)
+	return append(output, tagContent.ItemReferences...)
 }
 
-func (input *TagContent) GetAppData() AppDataContent {
-	return input.AppData
+func (tagContent *TagContent) GetAppData() AppDataContent {
+	return tagContent.AppData
 }
 
-func (input *NoteContent) GetAppData() AppDataContent {
-	return input.AppData
+func (noteContent *NoteContent) GetAppData() AppDataContent {
+	return noteContent.AppData
 }
 
-func (input *NoteContent) SetAppData(data AppDataContent) {
-	input.AppData = data
+func (noteContent *NoteContent) SetAppData(data AppDataContent) {
+	noteContent.AppData = data
 }
 
-func (input *TagContent) SetAppData(data AppDataContent) {
-	input.AppData = data
+func (tagContent *TagContent) SetAppData(data AppDataContent) {
+	tagContent.AppData = data
 }
 
-func (input *NoteContent) References() ItemReferences {
+func (noteContent *NoteContent) References() ItemReferences {
 	var output ItemReferences
-	return append(output, input.ItemReferences...)
+	return append(output, noteContent.ItemReferences...)
 }
 
 type TagContent struct {
@@ -827,4 +827,31 @@ func (i *Items) DeDupe() {
 		encountered = append(encountered, j.UUID)
 	}
 	*i = deDuped
+}
+
+func (tagContent TagContent) Equals(e TagContent) bool {
+	if tagContent.Title != e.Title {
+		return false
+	}
+	// TODO: compare references
+	return true
+}
+
+func (item Item) Equals(e Item) bool {
+	if item.UUID != e.UUID {
+		return false
+	}
+	if item.ContentType != e.ContentType {
+		return false
+	}
+	if item.Deleted != e.Deleted {
+		return false
+	}
+	if item.Content.GetTitle() != e.Content.GetTitle() {
+		return false
+	}
+	if item.Content.GetText() != e.Content.GetText() {
+		return false
+	}
+	return true
 }
