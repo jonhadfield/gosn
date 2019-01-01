@@ -413,11 +413,8 @@ func TestNoteTagging(t *testing.T) {
 		t.Error("failed to retrieve animal notes by tag")
 	}
 
-	var di DecryptedItems
-	di, err = getAnimalNotesOutput.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
-
 	var animalNotes Items
-	animalNotes, err = di.Parse()
+	animalNotes, err = getAnimalNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
 	animalNotes.Filter(getAnimalNotesFilters)
 	// check two notes are animal tagged ones
 	animalNoteTitles := []string{
@@ -453,10 +450,9 @@ func TestNoteTagging(t *testing.T) {
 		t.Error("failed to retrieve notes using regex")
 	}
 
-	di, err = getNotesOutput.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
-
 	var notes Items
-	notes, err = di.Parse()
+	notes, err = getNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+
 	notes.Filter(regexFilters)
 	// check two notes are animal tagged ones
 	expectedNoteTitles := []string{"Cheese", "GNU"}
@@ -468,7 +464,6 @@ func TestNoteTagging(t *testing.T) {
 			t.Errorf("got unexpected result: %s", fn.Content.GetTitle())
 		}
 	}
-
 }
 
 func TestSearchNotesByUUID(t *testing.T) {
@@ -820,9 +815,6 @@ func TestCreateAndGet301Notes(t *testing.T) {
 		}
 	}
 }
-
-
-
 
 func genRandomText(paragraphs int) string {
 	var strBuilder strings.Builder

@@ -174,6 +174,19 @@ func (ei EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
 	return
 }
 
+func (ei EncryptedItems) DecryptAndParse(Mk, Ak string) (o Items, err error) {
+	funcName := funcNameOutputStart + "DecryptAndParse" + funcNameOutputEnd
+	debug(funcName, fmt.Errorf("items: %d", len(ei)))
+
+	var di DecryptedItems
+	di, err = ei.Decrypt(Mk, Ak)
+	if err != nil {
+		return
+	}
+	o, err = di.Parse()
+	return
+}
+
 // GetItems retrieves items from the API using optional filters
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	funcName := funcNameOutputStart + "GetItems" + funcNameOutputEnd
