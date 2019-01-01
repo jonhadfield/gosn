@@ -868,3 +868,14 @@ func (item Item) Equals(e Item) bool {
 	}
 	return true
 }
+
+func (item Item) Copy() *Item {
+	res := new(Item)
+	res.Content = item.Content
+	res.UpdatedAt = item.UpdatedAt
+	res.CreatedAt = item.CreatedAt
+	res.ContentSize = item.ContentSize
+	res.ContentType = item.ContentType
+	res.UUID = item.UUID
+	return res
+}

@@ -222,6 +222,38 @@ func cleanup(session *Session) {
 	}
 }
 
+func TestNoteCopy(t *testing.T) {
+	initialNote := NewNote()
+	initialNoteContent := NewNoteContent()
+	initialNoteContent.Title = "Title"
+	initialNoteContent.Text = "Text"
+	initialNote.Content = initialNoteContent
+	dupeNote := initialNote.Copy()
+	assert.NotNil(t, dupeNote.Content)
+	assert.Equal(t, dupeNote.UUID, initialNote.UUID)
+	assert.Equal(t, dupeNote.ContentType, initialNote.ContentType)
+	assert.Equal(t, dupeNote.Content.GetText(), initialNote.Content.GetText())
+	assert.Equal(t, dupeNote.Content.GetTitle(), initialNote.Content.GetTitle())
+	assert.Equal(t, dupeNote.ContentSize, initialNote.ContentSize)
+	assert.Equal(t, dupeNote.CreatedAt, initialNote.CreatedAt)
+	assert.Equal(t, dupeNote.UpdatedAt, initialNote.UpdatedAt)
+}
+
+func TestTagCopy(t *testing.T) {
+	initialTag := NewTag()
+	initialTagContent := NewTagContent()
+	initialTagContent.Title = "Title"
+	initialTag.Content = initialTagContent
+	dupeTag := initialTag.Copy()
+	assert.NotNil(t, dupeTag.Content)
+	assert.Equal(t, dupeTag.UUID, initialTag.UUID)
+	assert.Equal(t, dupeTag.ContentType, initialTag.ContentType)
+	assert.Equal(t, dupeTag.Content.GetTitle(), initialTag.Content.GetTitle())
+	assert.Equal(t, dupeTag.ContentSize, initialTag.ContentSize)
+	assert.Equal(t, dupeTag.CreatedAt, initialTag.CreatedAt)
+	assert.Equal(t, dupeTag.UpdatedAt, initialTag.UpdatedAt)
+}
+
 func TestTagComparison(t *testing.T) {
 	xUUID := GenUUID()
 	one := NewTag()
