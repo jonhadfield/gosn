@@ -222,21 +222,51 @@ func cleanup(session *Session) {
 	}
 }
 
+func TestNoteContentCopy(t *testing.T) {
+	initialNoteTitle := "Title"
+	initialNoteText := "Title"
+	initialNoteContent := NewNoteContent()
+	initialNoteContent.Title = initialNoteTitle
+	initialNoteContent.Text = initialNoteText
+	dupeNoteContent := initialNoteContent.Copy()
+	// update initial to ensure copy
+	initialNoteContent.Title = "Updated Title"
+	initialNoteContent.Text = "Updated Text"
+	// now check duplicate is correct
+	assert.NotNil(t, dupeNoteContent)
+	assert.Equal(t, initialNoteTitle, dupeNoteContent.Title)
+	assert.Equal(t, initialNoteText, dupeNoteContent.GetText())
+}
+
+func TestTagContentCopy(t *testing.T) {
+	initialTagTitle := "Title"
+	initialTagContent := NewNoteContent()
+	initialTagContent.Title = initialTagTitle
+	dupeNoteContent := initialTagContent.Copy()
+	// update initial to ensure copy
+	initialTagContent.Title = "Updated Title"
+	// now check duplicate is correct
+	assert.NotNil(t, dupeNoteContent)
+	assert.Equal(t, initialTagTitle, dupeNoteContent.Title)
+}
+
 func TestNoteCopy(t *testing.T) {
+	initialNoteTitle := "Title"
 	initialNote := NewNote()
 	initialNoteContent := NewNoteContent()
-	initialNoteContent.Title = "Title"
+	initialNoteContent.Title = initialNoteTitle
 	initialNoteContent.Text = "Text"
 	initialNote.Content = initialNoteContent
 	dupeNote := initialNote.Copy()
+	assert.Equal(t, initialNote.Content.GetTitle(), initialNoteTitle)
 	assert.NotNil(t, dupeNote.Content)
-	assert.Equal(t, dupeNote.UUID, initialNote.UUID)
-	assert.Equal(t, dupeNote.ContentType, initialNote.ContentType)
-	assert.Equal(t, dupeNote.Content.GetText(), initialNote.Content.GetText())
-	assert.Equal(t, dupeNote.Content.GetTitle(), initialNote.Content.GetTitle())
-	assert.Equal(t, dupeNote.ContentSize, initialNote.ContentSize)
-	assert.Equal(t, dupeNote.CreatedAt, initialNote.CreatedAt)
-	assert.Equal(t, dupeNote.UpdatedAt, initialNote.UpdatedAt)
+	assert.Equal(t, initialNote.UUID, dupeNote.UUID)
+	assert.Equal(t, initialNote.ContentType, dupeNote.ContentType)
+	assert.Equal(t, initialNote.Content.GetText(), dupeNote.Content.GetText())
+	assert.Equal(t, initialNote.Content.GetTitle(), dupeNote.Content.GetTitle())
+	assert.Equal(t, initialNote.ContentSize, dupeNote.ContentSize)
+	assert.Equal(t, initialNote.CreatedAt, dupeNote.CreatedAt)
+	assert.Equal(t, initialNote.UpdatedAt, dupeNote.UpdatedAt)
 }
 
 func TestTagCopy(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -869,9 +870,35 @@ func (item Item) Equals(e Item) bool {
 	return true
 }
 
+func (noteContent NoteContent) Copy() *NoteContent {
+	res := new(NoteContent)
+	res.Title = noteContent.Title
+	res.Text = noteContent.Text
+	res.AppData = noteContent.AppData
+	res.ItemReferences = noteContent.ItemReferences
+	return res
+}
+func (tagContent TagContent) Copy() *TagContent {
+	res := new(TagContent)
+	res.Title = tagContent.Title
+	res.AppData = tagContent.AppData
+	res.ItemReferences = tagContent.ItemReferences
+	return res
+}
+
 func (item Item) Copy() *Item {
 	res := new(Item)
-	res.Content = item.Content
+	switch item.Content.(type) {
+	case *NoteContent:
+		tContent := item.Content.(*NoteContent)
+		res.Content = tContent.Copy()
+
+	case *TagContent:
+		tContent := item.Content.(*TagContent)
+		res.Content = tContent.Copy()
+	default:
+		fmt.Printf("unable to copy items with content of type: %s", reflect.TypeOf(item.Content))
+	}
 	res.UpdatedAt = item.UpdatedAt
 	res.CreatedAt = item.CreatedAt
 	res.ContentSize = item.ContentSize
