@@ -120,15 +120,18 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 	return
 }
 
-func _deleteAllTagsAndNotes(session *Session) (err error) {
+func _deleteAllTagsNotesAndSettings(session *Session) (err error) {
 	gnf := Filter{
 		Type: "Note",
 	}
 	gtf := Filter{
 		Type: "Tag",
 	}
+	gsf := Filter{
+		Type: "Setting",
+	}
 	f := ItemFilters{
-		Filters:  []Filter{gnf, gtf},
+		Filters:  []Filter{gnf, gtf, gsf},
 		MatchAny: true,
 	}
 	gii := GetItemsInput{
@@ -145,16 +148,15 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 
 	var items Items
 	items, err = di.Parse()
-
 	items.Filter(f)
 
 	var toDel Items
 	for x := range items {
 		md := items[x]
-		switch md.ContentType {
-		case "Note":
+		switch {
+		case md.ContentType == "Note":
 			md.Content = NewNoteContent()
-		case "Tag":
+		case md.ContentType == "Tag":
 			md.Content = NewTagContent()
 		}
 		md.Deleted = true
@@ -184,11 +186,7 @@ func _getItems(session Session, itemFilters ItemFilters) (items Items, err error
 		err = fmt.Errorf("GetItems Failed: %v", err)
 		return
 	}
-
-	var di DecryptedItems
-	di, err = gio.Items.Decrypt(session.Mk, session.Ak)
-
-	items, err = di.Parse()
+	items, err = gio.Items.DecryptAndParse(session.Mk, session.Ak)
 	items.Filter(itemFilters)
 	return
 }
@@ -217,7 +215,7 @@ func createTag(title, uuid string) *Item {
 }
 
 func cleanup(session *Session) {
-	if err := _deleteAllTagsAndNotes(session); err != nil {
+	if err := _deleteAllTagsNotesAndSettings(session); err != nil {
 		panic(err)
 	}
 }
@@ -683,7 +681,7 @@ func TestSearchTagsByText(t *testing.T) {
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
 	defer cleanup(&sOutput.Session)
-
+	cleanup(&sOutput.Session)
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
 	if _, err = _createTags(sOutput.Session, tagInput); err != nil {
 		t.Errorf("failed to create tags")
@@ -699,6 +697,7 @@ func TestSearchTagsByText(t *testing.T) {
 	var itemFilters ItemFilters
 	itemFilters.Filters = []Filter{filterOne}
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
+
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -722,7 +721,6 @@ func TestSearchTagsByRegex(t *testing.T) {
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
 	defer cleanup(&sOutput.Session)
-
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
 	if _, err = _createTags(sOutput.Session, tagInput); err != nil {
 		t.Errorf("failed to create tags")
@@ -738,6 +736,7 @@ func TestSearchTagsByRegex(t *testing.T) {
 	var itemFilters ItemFilters
 	itemFilters.Filters = []Filter{filterOne}
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
+
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -842,7 +841,6 @@ func TestCreateAndGet301Notes(t *testing.T) {
 		Filters: []Filter{giFilter},
 	}
 	for {
-
 		gii := GetItemsInput{
 			Session:     sOutput.Session,
 			CursorToken: cursorToken,
@@ -853,10 +851,9 @@ func TestCreateAndGet301Notes(t *testing.T) {
 			t.Error(err)
 		}
 
-		var di DecryptedItems
-		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
 		var items Items
-		items, err = di.Parse()
+		items, err = gio.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+		assert.NoError(t, err)
 
 		retrievedNotes = append(retrievedNotes, items...)
 		if stripLineBreak(gio.Cursor) == "" {
@@ -865,11 +862,12 @@ func TestCreateAndGet301Notes(t *testing.T) {
 			cursorToken = gio.Cursor
 		}
 	}
+	retrievedNotes.DeDupe()
+	retrievedNotes.Filter(giFilters)
 	if len(retrievedNotes) != numNotes {
 		t.Errorf("expected %d items but got %d\n", numNotes, len(retrievedNotes))
 	}
-	retrievedNotes.DeDupe()
-	retrievedNotes.Filter(giFilters)
+
 	for i, r := range retrievedNotes {
 		if !strings.HasPrefix(r.Content.GetTitle(), fmt.Sprintf("-%d-", i+1)) {
 			fmt.Println("expected:", i+1, "got", r.Content.GetTitle())

@@ -21,24 +21,122 @@ type Filter struct {
 func (i *Items) Filter(f ItemFilters) {
 	var filtered Items
 	var tags Items
-	for _, i := range *i {
-		if i.ContentType == "Tag" {
-			tags = append(tags, i)
-		}
-	}
-	for _, item := range *i {
-		switch item.ContentType {
-		case "Note":
-			if found := applyNoteFilters(item, f, tags); found {
-				filtered = append(filtered, item)
-			}
-		case "Tag":
-			if found := applyTagFilters(item, f); found {
-				filtered = append(filtered, item)
+	if len(f.Filters) > 0 {
+		for _, i := range *i {
+			if i.ContentType == "Tag" {
+				tags = append(tags, i)
 			}
 		}
+		for _, item := range *i {
+			switch {
+			case item.ContentType == "Note":
+				if found := applyNoteFilters(item, f, tags); found {
+					filtered = append(filtered, item)
+				}
+			case item.ContentType == "Tag":
+				if found := applyTagFilters(item, f); found {
+					filtered = append(filtered, item)
+				}
+			case strings.HasPrefix(item.ContentType, "SN|"):
+				if found := applySettingsFilters(item, f); found {
+					filtered = append(filtered, item)
+				}
+			}
+		}
+		*i = filtered
 	}
-	*i = filtered
+}
+
+func applySettingsFilters(item Item, itemFilters ItemFilters) bool {
+	var matchedAll bool
+	for i, filter := range itemFilters.Filters {
+		if strings.ToLower(filter.Type) != "setting" {
+			continue
+		}
+		switch strings.ToLower(filter.Key) {
+		case "type":
+			if item.Content == nil {
+				matchedAll = false
+			} else {
+				switch filter.Comparison {
+				case "~":
+					r := regexp.MustCompile(filter.Value)
+					if r.MatchString(item.ContentType) {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				case "==":
+					if item.ContentType == filter.Value {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				case "!=":
+					if item.ContentType != filter.Value {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				case "contains":
+					if strings.Contains(item.ContentType, filter.Value) {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				}
+			}
+		case "uuid":
+			if item.UUID == filter.Value {
+				if itemFilters.MatchAny {
+					return true
+				}
+				matchedAll = true
+
+			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
+				matchedAll = false
+			}
+		default:
+			if itemFilters.MatchAny {
+				return true
+			}
+			matchedAll = true // if no criteria specified then filter applies to type only, so true
+		}
+		// if last filter and matchedAll is true, then return true
+		if matchedAll && i == len(itemFilters.Filters)-1 {
+			return true
+		}
+	}
+	return false
 }
 
 func applyNoteTextFilter(f Filter, i Item, matchAny bool) (result, matchedAll, done bool) {
@@ -252,6 +350,9 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags Items) bool {
 				matchedAll = false
 			}
 		default:
+			if itemFilters.MatchAny {
+				return true
+			}
 			matchedAll = true // if no criteria specified then filter applies to type only
 		}
 		// if last filter and matchedAll is true, then return true
@@ -418,6 +519,9 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 				matchedAll = false
 			}
 		default:
+			if itemFilters.MatchAny {
+				return true
+			}
 			matchedAll = true // if no criteria specified then filter applies to type only, so true
 		}
 		// if last filter and matchedAll is true, then return true

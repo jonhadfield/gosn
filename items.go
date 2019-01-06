@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/matryer/try.v1"
 	"log"
 	"math"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/matryer/try.v1"
 )
 
 // Item describes a decrypted item
@@ -47,6 +48,13 @@ func NewNote() *Item {
 func NewTag() *Item {
 	item := newItem()
 	item.ContentType = "Tag"
+	return item
+}
+
+// NewSetting returns an Item of type Setting without content
+func NewSetting(settingType string) *Item {
+	item := newItem()
+	item.ContentType = settingType
 	return item
 }
 
@@ -157,8 +165,10 @@ func (ei EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
 			}
 			itemEncryptionKey := decryptedEncItemKey[:len(decryptedEncItemKey)/2]
 			itemAuthKey := decryptedEncItemKey[len(decryptedEncItemKey)/2:]
+
 			var decryptedContent string
 			decryptedContent, err = decryptString(eItem.Content, itemEncryptionKey, itemAuthKey, eItem.UUID)
+
 			if err != nil {
 				return
 			}
@@ -210,7 +220,6 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	if rErr != nil {
 		log.Fatalln("error:", err)
 	}
-
 	output.Items = sResp.Items
 	output.Items.DeDupe()
 	output.Unsaved = sResp.Unsaved
@@ -505,6 +514,54 @@ func UpdateItemRefs(i UpdateItemRefsInput) UpdateItemRefsOutput {
 		Items: updated,
 	}
 }
+
+func (settingContent *SettingContent) References() ItemReferences {
+	return nil
+}
+
+func (settingContent *SettingContent) SetReferences(newRefs ItemReferences) {
+	return
+}
+
+func (settingContent *SettingContent) UpsertReferences(newRefs ItemReferences) {
+	return
+}
+
+func (settingContent *SettingContent) SetUpdateTime(uTime time.Time) {
+	settingContent.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
+}
+
+func (settingContent *SettingContent) GetTitle() string {
+	return ""
+}
+
+func (settingContent *SettingContent) SetTitle(title string) {
+
+}
+
+func (settingContent *SettingContent) GetText() string {
+	return ""
+}
+
+func (settingContent *SettingContent) SetText(text string) {
+
+}
+
+func (settingContent *SettingContent) GetAppData() AppDataContent {
+	return settingContent.AppData
+}
+
+func (settingContent *SettingContent) SetAppData(data AppDataContent) {
+	settingContent.AppData = data
+}
+
+func (settingContent *SettingContent) GetUpdateTime() (time.Time, error) {
+	if settingContent.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
+		return time.Time{}, fmt.Errorf("notset")
+	}
+	return time.Parse(timeLayout, settingContent.AppData.OrgStandardNotesSN.ClientUpdatedAt)
+}
+
 func (noteContent *NoteContent) SetReferences(newRefs ItemReferences) {
 	noteContent.ItemReferences = newRefs
 }
@@ -669,6 +726,13 @@ type NoteContent struct {
 	AppData        AppDataContent `json:"appData"`
 }
 
+type SettingContent struct {
+	Identifier string         `json:"identifier"`
+	Name       string         `json:"name"`
+	HostedURL  string         `json:"hosted_url"`
+	AppData    AppDataContent `json:"appData"`
+}
+
 func (noteContent *NoteContent) GetUpdateTime() (time.Time, error) {
 	if noteContent.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
 		return time.Time{}, fmt.Errorf("notset")
@@ -770,8 +834,12 @@ func (di *DecryptedItems) Parse() (p Items, err error) {
 	for _, i := range *di {
 		var processedItem Item
 		processedItem.ContentType = i.ContentType
+		processedItem.UUID = i.UUID
 		if !i.Deleted {
 			processedItem.Content, err = processContentModel(i.ContentType, i.Content)
+			if processedItem.Content == nil && len(i.Content) > 0 {
+				log.Fatal("processContentModel failed")
+			}
 			if err != nil {
 				return
 			}
@@ -806,15 +874,20 @@ func processContentModel(contentType, input string) (output ClientStructure, err
 	// identify content model
 	// try and unmarshall Item
 	var itemContent NoteContent
-	switch contentType {
-	case "Note":
+	switch {
+	case contentType == "Note":
 		err = json.Unmarshal([]byte(input), &itemContent)
 		return &itemContent, err
-
-	case "Tag":
+	case contentType == "Tag":
 		var tagContent TagContent
 		err = json.Unmarshal([]byte(input), &tagContent)
 		return &tagContent, err
+	case strings.HasPrefix(contentType, "SN|"):
+		var settingContent SettingContent
+		err = json.Unmarshal([]byte(input), &settingContent)
+		return &settingContent, err
+	default:
+		log.Fatal("unrecognised type")
 	}
 	return
 }

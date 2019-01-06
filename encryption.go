@@ -26,7 +26,6 @@ func unPad(cipherText []byte) ([]byte, error) {
 
 func decryptString(stringToDecrypt, encryptionKey, authKey, uuid string) (output string, err error) {
 	//funcName := funcNameOutputStart + "decryptString" + funcNameOutputEnd
-
 	components := strings.Split(stringToDecrypt, ":")
 
 	version := components[0]

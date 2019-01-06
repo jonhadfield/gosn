@@ -2,9 +2,66 @@ package gosn
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestFilterSettings(t *testing.T) {
+	sOutput, err := SignIn(sInput)
+	assert.NoError(t, err, "sign-in failed", err)
+	cleanup(&sOutput.Session)
+	defer cleanup(&sOutput.Session)
+
+	randPara := testParas[randInt(0, len(testParas))]
+
+	newNoteContent := NoteContent{
+		Title:          "TestTitle",
+		Text:           randPara,
+		ItemReferences: nil,
+	}
+
+	newNoteContent.SetUpdateTime(time.Now())
+	newNote := NewNote()
+	newNote.Content = &newNoteContent
+	dItems := Items{*newNote}
+	assert.NoError(t, dItems.Validate())
+	eItems, _ := dItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	putItemsInput := PutItemsInput{
+		Items:   eItems,
+		Session: sOutput.Session,
+	}
+	_, err = PutItems(putItemsInput)
+
+	// create setting
+	setting := NewSetting("SN|Component")
+	settings := Items{*setting}
+	assert.NoError(t, settings.Validate())
+	eItems, _ = settings.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	pii := PutItemsInput{
+		Session: sOutput.Session,
+		Items:   eItems,
+	}
+	_, err = PutItems(pii)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	filter := Filter{
+		Type: "Setting",
+	}
+	itemFilters := ItemFilters{
+		Filters:  []Filter{filter},
+		MatchAny: true,
+	}
+	assert.NoError(t, err, "sign-in failed", err)
+	defer cleanup(&sOutput.Session)
+	foundItems, err := _getItems(sOutput.Session, itemFilters)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	assert.Len(t, foundItems, 1)
+}
 
 func TestFilterNoteTitle(t *testing.T) {
 	gnuNote := createNote("GNU", "Is not Unix", "")
