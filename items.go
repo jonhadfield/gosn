@@ -181,7 +181,6 @@ func (ei EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
 		item.CreatedAt = eItem.CreatedAt
 		o = append(o, item)
 	}
-
 	return
 }
 
@@ -870,6 +869,8 @@ func (di *DecryptedItems) Parse() (p Items, err error) {
 	return
 }
 
+
+
 func processContentModel(contentType, input string) (output ClientStructure, err error) {
 	// identify content model
 	// try and unmarshall Item
@@ -887,7 +888,7 @@ func processContentModel(contentType, input string) (output ClientStructure, err
 		err = json.Unmarshal([]byte(input), &settingContent)
 		return &settingContent, err
 	default:
-		log.Fatal("unrecognised type")
+		log.Fatal("unrecognised type:", contentType)
 	}
 	return
 }
