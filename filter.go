@@ -122,29 +122,60 @@ func applyNoteTextFilter(f Filter, i Item, matchAny bool) (result, matchedAll, d
 func applyNoteTagTitleFilter(f Filter, i Item, tags Items, matchAny bool) (result, matchedAll, done bool) {
 	var matchesTag bool
 	for _, tag := range tags {
-		if tag.Content != nil && tag.Content.GetTitle() == f.Value {
-			for _, ref := range tag.Content.References() {
-				if i.UUID == ref.UUID {
-					matchesTag = true
+		if tag.Content == nil {
+			matchedAll = false
+		} else {
+			switch f.Comparison {
+			case "~":
+				r := regexp.MustCompile(f.Value)
+				if tag.Content != nil && r.MatchString(tag.Content.GetTitle()) {
+					for _, ref := range tag.Content.References() {
+						if i.UUID == ref.UUID {
+							matchesTag = true
+						}
+					}
+				}
+				if matchesTag {
+					if matchAny {
+						result = true
+						done = true
+						return
+					}
+					matchedAll = true
+				} else {
+					if ! matchAny {
+						result = false
+						done = true
+						return
+					}
+					matchedAll = false
+				}
+			case "==":
+				if tag.Content != nil && tag.Content.GetTitle() == f.Value {
+					for _, ref := range tag.Content.References() {
+						if i.UUID == ref.UUID {
+							matchesTag = true
+						}
+					}
+				}
+				if matchesTag {
+					if matchAny {
+						result = true
+						done = true
+						return
+					}
+					matchedAll = true
+				} else {
+					if ! matchAny {
+						result = false
+						done = true
+						return
+					}
+					matchedAll = false
 				}
 			}
 		}
-	}
-	if matchesTag {
-		if matchAny {
-			result = true
-			done = true
-			return
-		}
-		matchedAll = true
-	} else {
-		if matchAny {
-			result = false
-			done = true
-			return
-		}
-		matchedAll = false
-	}
+	} // end for
 	return
 }
 

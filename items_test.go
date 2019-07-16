@@ -460,7 +460,7 @@ func TestNoteTagging(t *testing.T) {
 	getAnimalNotesFilter := Filter{
 		Type:       "Note",
 		Key:        "TagTitle",
-		Comparison: "==",
+		Comparison: "~",
 		Value:      "Animal Facts",
 	}
 	getAnimalNotesFilters := ItemFilters{
@@ -842,7 +842,6 @@ func TestCreateAndGet301Notes(t *testing.T) {
 		Filters: []Filter{giFilter},
 	}
 	for {
-
 		gii := GetItemsInput{
 			Session:     sOutput.Session,
 			CursorToken: cursorToken,
@@ -852,11 +851,18 @@ func TestCreateAndGet301Notes(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+		gio.Items.DeDupe()
 
 		var di DecryptedItems
 		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+		if err != nil {
+			t.Error(err)
+		}
 		var items Items
 		items, err = di.Parse()
+		if err != nil {
+			t.Error(err)
+		}
 
 		retrievedNotes = append(retrievedNotes, items...)
 		if stripLineBreak(gio.Cursor) == "" {
@@ -865,10 +871,10 @@ func TestCreateAndGet301Notes(t *testing.T) {
 			cursorToken = gio.Cursor
 		}
 	}
+	retrievedNotes.Filter(giFilters)
 	if len(retrievedNotes) != numNotes {
 		t.Errorf("expected %d items but got %d\n", numNotes, len(retrievedNotes))
 	}
-	retrievedNotes.DeDupe()
 	retrievedNotes.Filter(giFilters)
 	for i, r := range retrievedNotes {
 		if !strings.HasPrefix(r.Content.GetTitle(), fmt.Sprintf("-%d-", i+1)) {

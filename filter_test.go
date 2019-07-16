@@ -177,7 +177,14 @@ func TestFilterNoteByTagTitle(t *testing.T) {
 	}
 	foodTag.Content.UpsertReferences(ItemReferences{cheeseRef})
 
-	animalTagUUIDFilter := Filter{
+	animalTagTitleRegexFilter := Filter{
+		Type:       "Note",
+		Key:        "TagTitle",
+		Comparison: "~",
+		Value:      "^[A-Z]nima.?$",
+	}
+
+	animalTagTitleEqualsFilter := Filter{
 		Type:       "Note",
 		Key:        "TagTitle",
 		Comparison: "==",
@@ -198,6 +205,11 @@ func TestFilterNoteByTagTitle(t *testing.T) {
 		Value:      animalTagUUID,
 	}
 
+	animalItemFiltersTagTitleRegex := ItemFilters{
+		Filters:  []Filter{animalTagTitleRegexFilter},
+		MatchAny: true,
+	}
+
 	animalItemFiltersNegativeMatchAny := ItemFilters{
 		Filters:  []Filter{animalTagUUIDFilterNegative},
 		MatchAny: true,
@@ -209,19 +221,32 @@ func TestFilterNoteByTagTitle(t *testing.T) {
 	}
 
 	animalItemFilters := ItemFilters{
-		Filters:  []Filter{animalTagUUIDFilter},
+		Filters:  []Filter{animalTagTitleEqualsFilter},
 		MatchAny: true,
 	}
 	animalAndFoodItemFiltersAnyTrue := ItemFilters{
-		Filters:  []Filter{foodTagUUIDFilter, animalTagUUIDFilter},
+		Filters:  []Filter{foodTagUUIDFilter, animalTagTitleEqualsFilter},
 		MatchAny: true,
 	}
 	animalAndFoodItemFiltersAnyFalse := ItemFilters{
-		Filters:  []Filter{foodTagUUIDFilter, animalTagUUIDFilter},
+		Filters:  []Filter{foodTagUUIDFilter, animalTagTitleEqualsFilter},
 		MatchAny: false,
 	}
+	animalAndFoodItemFiltersIncRegexAnyTrue := ItemFilters{
+		Filters:  []Filter{foodTagUUIDFilter, animalTagTitleRegexFilter},
+		MatchAny: true,
+	}
+	animalAndFoodItemFiltersIncRegexAnyFalse := ItemFilters{
+		Filters:  []Filter{foodTagUUIDFilter, animalTagTitleRegexFilter},
+		MatchAny: false,
+	}
+
+	// try match single animal by tag title regex (success)
+	res := applyNoteFilters(*gnuNote, animalItemFiltersTagTitleRegex, Items{*animalTag})
+	assert.True(t, res, "failed to match any note by tag title regex")
+
 	// try match single animal (success)
-	res := applyNoteFilters(*gnuNote, animalItemFilters, Items{*animalTag})
+	res = applyNoteFilters(*gnuNote, animalItemFilters, Items{*animalTag})
 	assert.True(t, res, "failed to match any note by tag title")
 
 	// try match animal note against food tag (failure)
@@ -231,6 +256,14 @@ func TestFilterNoteByTagTitle(t *testing.T) {
 	// try against any of multiple filters - match any (success)
 	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyTrue, Items{*animalTag, *foodTag})
 	assert.True(t, res, "failed to match cheese note against any of animal or food tag")
+
+	// try against any of multiple filters - match any (success)
+	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersIncRegexAnyTrue, Items{*animalTag, *foodTag})
+	assert.True(t, res, "failed to match cheese note against any of animal or food tag")
+
+	// try against any of multiple filters - match any (success)
+	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersIncRegexAnyFalse, Items{*animalTag, *foodTag})
+	assert.False(t, res, "incorrectly matched cheese note against both animal and food")
 
 	// try against any of multiple filters - match all (failure)
 	res = applyNoteFilters(*cheeseNote, animalAndFoodItemFiltersAnyFalse, Items{*animalTag, *foodTag})
