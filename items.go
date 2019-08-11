@@ -28,7 +28,7 @@ type Item struct {
 
 // returns a new, typeless item
 func newItem() *Item {
-	now := time.Now().Format(timeLayout)
+	now := time.Now().UTC().Format(timeLayout)
 	return &Item{
 		UUID:      GenUUID(),
 		CreatedAt: now,
@@ -53,14 +53,14 @@ func NewTag() *Item {
 // NewNoteContent returns an empty Note content instance
 func NewNoteContent() *NoteContent {
 	c := &NoteContent{}
-	c.SetUpdateTime(time.Now())
+	c.SetUpdateTime(time.Now().UTC())
 	return c
 }
 
 // NewTagContent returns an empty Tag content instance
 func NewTagContent() *TagContent {
 	c := &TagContent{}
-	c.SetUpdateTime(time.Now())
+	c.SetUpdateTime(time.Now().UTC())
 	return c
 }
 
