@@ -245,6 +245,9 @@ func (i *Items) Validate() error {
 		if !item.Deleted {
 			if stringInSlice(item.ContentType, []string{"Tag", "Note"}, true) {
 				updatedTime, err = item.Content.GetUpdateTime()
+				if err != nil {
+					return err
+				}
 				switch {
 				case item.Content.GetTitle() == "":
 					err = fmt.Errorf("failed to create \"%s\" due to missing title: \"%s\"",
@@ -375,31 +378,13 @@ func resizePutForRetry(start, end, numBytes int) int {
 func putChunk(session Session, encItemJSON []byte) (savedItems []EncryptedItem, syncToken string, err error) {
 	reqBody := []byte(`{"items":` + string(encItemJSON) +
 		`,"sync_token":"` + stripLineBreak(syncToken) + `"}`)
-	var syncResp *http.Response
-	syncResp, err = makeSyncRequest(session, reqBody)
+	var syncRespBodyBytes []byte
+
+	syncRespBodyBytes, err = makeSyncRequest(session, reqBody)
 	if err != nil {
-		return
-	}
-	switch syncResp.StatusCode {
-	case 413:
-		err = errors.New("payload too large")
-		_ = syncResp.Body.Close()
-	}
-	if syncResp.StatusCode > 400 {
-		_ = syncResp.Body.Close()
 		return
 	}
 
-	// process response body
-	var syncRespBodyBytes []byte
-	syncRespBodyBytes, err = getResponseBody(syncResp)
-	if err != nil {
-		return
-	}
-	err = syncResp.Body.Close()
-	if err != nil {
-		return
-	}
 	// get item results from API response
 	var bodyContent syncResponse
 	bodyContent, err = getBodyContent(syncRespBodyBytes)
@@ -540,7 +525,7 @@ func (noteContent *NoteContent) UpsertReferences(newRefs ItemReferences) {
 	}
 }
 
-func makeSyncRequest(session Session, reqBody []byte) (response *http.Response, err error) {
+func makeSyncRequest(session Session, reqBody []byte) (responseBody []byte, err error) {
 	funcName := funcNameOutputStart + "makeSyncRequest" + funcNameOutputEnd
 
 	var request *http.Request
@@ -548,15 +533,34 @@ func makeSyncRequest(session Session, reqBody []byte) (response *http.Response, 
 	if err != nil {
 		return
 	}
+
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer "+session.Token)
+	var response *http.Response
 	response, err = httpClient.Do(request)
-
-	if response.StatusCode >= 400 {
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err := response.Body.Close() ; err != nil {
+			fmt.Println("failed to close connection")
+		}
+	}()
+	switch response.StatusCode {
+	case 413:
+		err = errors.New("payload too large")
+		return
+	}
+	if response.StatusCode > 400 {
 		debug(funcName, fmt.Errorf("sync of %d req bytes failed with: %s", len(reqBody), response.Status))
+		return
 	}
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		debug(funcName, fmt.Errorf("sync of %d req bytes succeeded with: %s", len(reqBody), response.Status))
+	}
+	responseBody, err = getResponseBody(response)
+	if err != nil {
+		return
 	}
 	return
 }
@@ -598,27 +602,14 @@ func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
 
 	// make the request
 	debug(funcName, fmt.Sprintf("making request: %s", stripLineBreak(string(requestBody))))
-	syncResp, err := makeSyncRequest(input.Session, requestBody)
-	if err != nil {
-		return
-	}
-	// process response body
-	var syncRespBodyBytes []byte
-	syncRespBodyBytes, err = getResponseBody(syncResp)
-	if err != nil {
-		return
-	}
-	if syncResp.StatusCode == 413 {
-		return out, errors.New("413: request entity too large")
-	}
-	err = syncResp.Body.Close()
+	responseBody, err := makeSyncRequest(input.Session, requestBody)
 	if err != nil {
 		return
 	}
 
 	// get encrypted items from API response
 	var bodyContent syncResponse
-	bodyContent, err = getBodyContent(syncRespBodyBytes)
+	bodyContent, err = getBodyContent(responseBody)
 	if err != nil {
 		return
 	}
@@ -637,6 +628,9 @@ func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
 		input.CursorToken = out.CursorToken
 		input.PageSize = limit
 		newOutput, err = getItemsViaAPI(input)
+		if err != nil {
+			return
+		}
 		out.Items = append(out.Items, newOutput.Items...)
 		out.SavedItems = append(out.Items, newOutput.SavedItems...)
 		out.Unsaved = append(out.Items, newOutput.Unsaved...)

@@ -42,14 +42,8 @@ func getResponseBody(resp *http.Response) (body []byte, err error) {
 		if err != nil {
 			return
 		}
-		if err != nil {
-			return
-		}
 	default:
 		output = resp.Body
-		if err != nil {
-			return
-		}
 	}
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(output)
