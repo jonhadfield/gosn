@@ -13,7 +13,7 @@ const (
 	signInPath       = "/auth/sign_in" // remote path for authenticating
 	syncPath         = "/items/sync"   // remote path for making sync calls
 	// PageSize is the maximum number of items to return with each call
-	PageSize            = 110
+	PageSize            = 150
 	timeLayout          = "2006-01-02T15:04:05.000Z"
 	defaultSNVersion    = "003"
 	defaultPasswordCost = 110000
@@ -41,6 +41,7 @@ func init() {
 func createHTTPClient() *http.Client {
 	client := &http.Client{
 		Transport: &http.Transport{
+			MaxIdleConns:        maxIdleConnections,
 			MaxIdleConnsPerHost: maxIdleConnections,
 			DisableKeepAlives:   false,
 		},

@@ -51,17 +51,21 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 
 	var signInURLReq *http.Request
 	signInURLReq, err = http.NewRequest(http.MethodPost, input.signInURL, bytes.NewBuffer(reqBodyBytes))
-	signInURLReq.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		return
 	}
+	signInURLReq.Header.Set("Content-Type", "application/json")
 
 	var signInResp *http.Response
 	signInResp, err = client.Do(signInURLReq)
 	if err != nil {
 		return signInSuccess, signInFailure, err
 	}
-	defer signInResp.Body.Close()
+	defer func() {
+		if err := signInResp.Body.Close(); err != nil {
+			fmt.Println("failed to close connection")
+		}
+	}()
 
 	var signInRespBody []byte
 	signInRespBody, err = getResponseBody(signInResp)
@@ -138,7 +142,11 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 	if err != nil {
 		return
 	}
-	defer response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			fmt.Println("failed to close connection")
+		}
+	}()
 
 	var requestOutput doAuthRequestOutput
 	var errResp errorResponse
@@ -159,6 +167,9 @@ func getAuthParams(input authParamsInput) (output authParamsOutput, err error) {
 	var authRequestOutput doAuthRequestOutput
 	if input.tokenName == "" {
 		authRequestOutput, err = doAuthParamsRequest(input)
+		if err != nil {
+			return
+		}
 		output.Identifier = authRequestOutput.Identifier
 		output.PasswordCost = authRequestOutput.PasswordCost
 		output.PasswordNonce = authRequestOutput.PasswordNonce
@@ -168,9 +179,6 @@ func getAuthParams(input authParamsInput) (output authParamsOutput, err error) {
 
 		if authRequestOutput.mfaKEY != "" {
 			err = fmt.Errorf("requestMFA")
-			return
-		}
-		if err != nil {
 			return
 		}
 	} else {
@@ -184,7 +192,9 @@ func getAuthParams(input authParamsInput) (output authParamsOutput, err error) {
 func getAuthParamsWithMFA(input authParamsInput) (output authParamsOutput, err error) {
 	var authRequestOutput doAuthRequestOutput
 	authRequestOutput, err = doAuthParamsRequest(input)
-
+	if err != nil {
+		return
+	}
 	output.Identifier = authRequestOutput.Identifier
 	output.PasswordCost = authRequestOutput.PasswordCost
 	output.PasswordNonce = authRequestOutput.PasswordNonce
@@ -263,10 +273,11 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 	// request authentication parameters
 	var getAuthParamsOutput authParamsOutput
 	getAuthParamsOutput, err = getAuthParams(getAuthParamsInput)
-	output.TokenName = getAuthParamsOutput.TokenName
 	if err != nil {
 		return
 	}
+	output.TokenName = getAuthParamsOutput.TokenName
+
 	// generate encrypted password
 	var encPassword string
 	var genEncPasswordInput generateEncryptedPasswordInput
@@ -294,6 +305,9 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 		tokenValue:  input.TokenVal,
 		signInURL:   input.APIServer + signInPath,
 	})
+	if err != nil {
+		return
+	}
 	if requestTokenFailure.Error.Message != "" {
 		err = fmt.Errorf(strings.ToLower(requestTokenFailure.Error.Message))
 		return
@@ -360,18 +374,22 @@ func (input RegisterInput) Register() (token string, err error) {
 	reqBodyBytes := []byte(reqBody)
 
 	req, err = http.NewRequest(http.MethodPost, input.APIServer+authRegisterPath, bytes.NewBuffer(reqBodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	req.Host = input.APIServer
-
 	if err != nil {
 		return
 	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Host = input.APIServer
+
 	var response *http.Response
 	response, err = httpClient.Do(req)
 	if err != nil {
 		return
 	}
-	defer response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			fmt.Println("failed to close connection")
+		}
+	}()
 	token, err = processDoRegisterRequestResponse(response)
 	if err != nil {
 		return
@@ -380,7 +398,6 @@ func (input RegisterInput) Register() (token string, err error) {
 }
 
 func generateInitialKeysAndAuthParamsForUser(email, password string) (pw, pwNonce string, err error) {
-
 	var genInput generateEncryptedPasswordInput
 	genInput.userPassword = password
 	genInput.Version = defaultSNVersion
