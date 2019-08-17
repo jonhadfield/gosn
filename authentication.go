@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	mathrand "math/rand"
 	"net/http"
 	"strconv"
@@ -414,4 +415,39 @@ func generateInitialKeysAndAuthParamsForUser(email, password string) (pw, pwNonc
 	pw, _, _, err = generateEncryptedPasswordAndKeys(genInput)
 
 	return
+}
+
+// CLiSignIn takes the server URL and credentials and sends them to the API to get a response including
+// an authentication token plus the keys required to encrypt and decrypt SN items
+func CliSignIn(email, password, apiServer string) (session Session, err error) {
+	sInput := SignInInput{
+		Email:     email,
+		Password:  password,
+		APIServer: apiServer,
+	}
+	sOutput, signInErr := SignIn(sInput)
+	if signInErr != nil {
+		if signInErr.Error() == "requestMFA" {
+			var tokenValue string
+			fmt.Print("token: ")
+			_, err = fmt.Scanln(&tokenValue)
+			if err != nil {
+				return
+			}
+			// TODO: handle missing TokenName and Session
+			sInput.TokenName = sOutput.TokenName
+			sInput.TokenVal = strings.TrimSpace(tokenValue)
+			sOutput, signInErr = SignIn(sInput)
+
+			session = sOutput.Session
+			if signInErr != nil {
+				err = signInErr
+				return
+			}
+		} else {
+			log.Fatal(signInErr.Error())
+		}
+	}
+	session = sOutput.Session
+	return session, err
 }
