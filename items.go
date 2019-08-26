@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"gopkg.in/matryer/try.v1"
-	"log"
 	"math"
 	"net/http"
 	"reflect"
@@ -208,7 +207,7 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 		return attempt < 3, rErr
 	})
 	if rErr != nil {
-		log.Fatalln("error:", err)
+		return output, rErr
 	}
 
 	output.Items = sResp.Items
