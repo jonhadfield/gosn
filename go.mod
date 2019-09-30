@@ -11,3 +11,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/matryer/try.v1 v1.0.0-20150601225556-312d2599e12e
 )
+
+go 1.13

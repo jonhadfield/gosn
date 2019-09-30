@@ -36,7 +36,8 @@ func decryptString(stringToDecrypt, encryptionKey, authKey, uuid string) (output
 	cipherText := components[4]
 
 	if components[2] != uuid {
-		err = fmt.Errorf("aborting as note uuid is not equal to item uuid")
+		err = fmt.Errorf("aborting as uuid in string to decrypt: \"%s\" is not equal to passed uuid: \"%s\"",
+			localUUID, uuid)
 		return
 	}
 	stringToAuth := fmt.Sprintf("%s:%s:%s:%s", version, localUUID, IV, cipherText)
