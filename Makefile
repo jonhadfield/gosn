@@ -17,7 +17,7 @@ fmt:
 	find . -name '*.go' -not -wholename './vendor/*' | while read -r file; do gofmt -w -s "$$file"; goimports -w "$$file"; done
 
 lint:
-	golangci-lint run --enable-all --disable lll
+	golangci-lint run --enable-all --disable lll --disable misspell --disable dupl
 
 ci: lint test
 
@@ -27,6 +27,9 @@ BUILD_DATE := $(shell date -u '+%Y/%m/%d:%H:%M:%S')
 
 critic:
 	gocritic check-project .
+
+find-updates:
+	go list -u -m -json all | go-mod-outdated -update -direct
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
