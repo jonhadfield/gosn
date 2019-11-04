@@ -20,12 +20,14 @@ type Filter struct {
 
 func (i *Items) Filter(f ItemFilters) {
 	var filtered Items
+
 	var tags Items
 	for _, i := range *i {
 		if i.ContentType == "Tag" {
 			tags = append(tags, i)
 		}
 	}
+
 	for _, item := range *i {
 		switch item.ContentType {
 		case "Note":

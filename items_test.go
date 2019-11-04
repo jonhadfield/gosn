@@ -135,17 +135,25 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 		Session: *session,
 	}
 
-	gio, err := GetItems(gii)
+	var gio GetItemsOutput
+
+	gio, err = GetItems(gii)
 	if err != nil {
 		return
 	}
 
 	var di DecryptedItems
 	di, err = gio.Items.Decrypt(session.Mk, session.Ak)
+	if err != nil {
+		return
+	}
 
 	var items Items
-	items, err = di.Parse()
 
+	items, err = di.Parse()
+	if err != nil {
+		return
+	}
 	items.Filter(f)
 
 	var toDel Items
@@ -187,8 +195,15 @@ func _getItems(session Session, itemFilters ItemFilters) (items Items, err error
 
 	var di DecryptedItems
 	di, err = gio.Items.Decrypt(session.Mk, session.Ak)
+	if err != nil {
+		return
+	}
 
 	items, err = di.Parse()
+	if err != nil {
+		return
+	}
+
 	items.Filter(itemFilters)
 	return
 }
@@ -335,9 +350,18 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 		Session: sOutput.Session,
 	}
 	var gio GetItemsOutput
+
 	gio, err = GetItems(getItemsInput)
+	if err != nil {
+		return
+	}
+
 	var di DecryptedItems
 	di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	if err != nil {
+		return
+	}
+
 	var items Items
 	items, err = di.Parse()
 	assert.NoError(t, err, "failed to get items")
@@ -365,8 +389,6 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 }
 
 func TestNoteTagging(t *testing.T) {
-	// SetDebugLogger(log.Println)
-
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
 	defer cleanup(&sOutput.Session)
@@ -473,10 +495,16 @@ func TestNoteTagging(t *testing.T) {
 	getAnimalNotesOutput, err = GetItems(getAnimalNotesInput)
 	if err != nil {
 		t.Error("failed to retrieve animal notes by tag")
+		return
 	}
 
 	var animalNotes Items
+
 	animalNotes, err = getAnimalNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+	if err != nil {
+		return
+	}
+
 	animalNotes.Filter(getAnimalNotesFilters)
 	// check two notes are animal tagged ones
 	animalNoteTitles := []string{
@@ -508,12 +536,11 @@ func TestNoteTagging(t *testing.T) {
 	}
 	var getNotesOutput GetItemsOutput
 	getNotesOutput, err = GetItems(getNotesInput)
-	if err != nil {
-		t.Error("failed to retrieve notes using regex")
-	}
+	assert.NoError(t, err, "failed to retrieve notes using regex")
 
 	var notes Items
 	notes, err = getNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+	assert.NoError(t, err)
 
 	notes.Filter(regexFilters)
 	// check two notes are animal tagged ones
