@@ -75,6 +75,7 @@ func randInt(min int, max int) int {
 }
 func _createNotes(session Session, input map[string]string) (output PutItemsOutput, err error) {
 	var newNotes Items
+
 	for k, v := range input {
 		newNote := NewNote()
 		newNoteContent := NewNoteContent()
@@ -83,16 +84,19 @@ func _createNotes(session Session, input map[string]string) (output PutItemsOutp
 		newNote.Content = newNoteContent
 		newNotes = append(newNotes, *newNote)
 	}
+
 	eNotes, _ := newNotes.Encrypt(session.Mk, session.Ak)
 	putItemsInput := PutItemsInput{
 		Session: session,
 		Items:   eNotes,
 	}
+
 	output, err = PutItems(putItemsInput)
 	if err != nil {
 		err = fmt.Errorf("PutItems Failed: %v", err)
 		return
 	}
+
 	return
 }
 
@@ -112,11 +116,13 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 			Items:   eItems,
 		}
 		output, err = PutItems(putItemsInput)
+
 		if err != nil {
 			err = fmt.Errorf("PutItems Failed: %v", err)
 			return
 		}
 	}
+
 	return
 }
 
@@ -135,20 +141,31 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 		Session: *session,
 	}
 
-	gio, err := GetItems(gii)
+	var gio GetItemsOutput
+
+	gio, err = GetItems(gii)
 	if err != nil {
 		return
 	}
 
 	var di DecryptedItems
+
 	di, err = gio.Items.Decrypt(session.Mk, session.Ak)
+	if err != nil {
+		return
+	}
 
 	var items Items
+
 	items, err = di.Parse()
+	if err != nil {
+		return
+	}
 
 	items.Filter(f)
 
 	var toDel Items
+
 	for x := range items {
 		md := items[x]
 		switch md.ContentType {
@@ -157,6 +174,7 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 		case "Tag":
 			md.Content = NewTagContent()
 		}
+
 		md.Deleted = true
 		toDel = append(toDel, md)
 	}
@@ -166,19 +184,23 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 		Session: *session,
 		Items:   eToDel,
 	}
+
 	_, err = PutItems(putItemsInput)
 	if err != nil {
 		err = fmt.Errorf("PutItems Failed: %v", err)
 		return
 	}
-	return
+
+	return err
 }
 
 func _getItems(session Session, itemFilters ItemFilters) (items Items, err error) {
 	getItemsInput := GetItemsInput{
 		Session: session,
 	}
+
 	var gio GetItemsOutput
+
 	gio, err = GetItems(getItemsInput)
 	if err != nil {
 		err = fmt.Errorf("GetItems Failed: %v", err)
@@ -186,10 +208,19 @@ func _getItems(session Session, itemFilters ItemFilters) (items Items, err error
 	}
 
 	var di DecryptedItems
+
 	di, err = gio.Items.Decrypt(session.Mk, session.Ak)
+	if err != nil {
+		return
+	}
 
 	items, err = di.Parse()
+	if err != nil {
+		return
+	}
+
 	items.Filter(itemFilters)
+
 	return
 }
 
@@ -198,10 +229,12 @@ func createNote(title, text, uuid string) *Item {
 	if uuid != "" {
 		note.UUID = uuid
 	}
+
 	content := NewNoteContent()
 	content.Title = title
 	content.Text = text
 	note.Content = content
+
 	return note
 }
 
@@ -210,9 +243,11 @@ func createTag(title, uuid string) *Item {
 	if uuid != "" {
 		tag.UUID = uuid
 	}
+
 	content := NewTagContent()
 	content.Title = title
 	tag.Content = content
+
 	return tag
 }
 
@@ -307,7 +342,9 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
+
 	randPara := testParas[randInt(0, len(testParas))]
 
 	newNoteContent := NoteContent{
@@ -317,6 +354,7 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	}
 
 	newNoteContent.SetUpdateTime(time.Now())
+
 	newNote := NewNote()
 	newNote.Content = &newNoteContent
 	dItems := Items{*newNote}
@@ -326,7 +364,9 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 		Items:   eItems,
 		Session: sOutput.Session,
 	}
+
 	var putItemsOutput PutItemsOutput
+
 	putItemsOutput, err = PutItems(putItemsInput)
 	assert.NoError(t, err, "PutItems Failed", err)
 	assert.Len(t, putItemsOutput.ResponseBody.SavedItems, 1, "expected 1")
@@ -334,41 +374,57 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	getItemsInput := GetItemsInput{
 		Session: sOutput.Session,
 	}
+
 	var gio GetItemsOutput
+
 	gio, err = GetItems(getItemsInput)
+	if err != nil {
+		return
+	}
+
 	var di DecryptedItems
+
 	di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	if err != nil {
+		return
+	}
+
 	var items Items
 	items, err = di.Parse()
 	assert.NoError(t, err, "failed to get items")
+
 	var foundCreatedItem bool
+
 	for i := range items {
 		if items[i].UUID == uuidOfNewItem {
 			foundCreatedItem = true
+
 			if items[i].ContentType != "Note" {
 				t.Errorf("content type of new item is incorrect - expected: Note got: %s",
 					items[i].ContentType)
 			}
+
 			if items[i].Deleted {
 				t.Errorf("deleted status of new item is incorrect - expected: False got: True")
 			}
+
 			if items[i].Content.GetText() != randPara {
 				t.Errorf("text of new item is incorrect - expected: %s got: %s",
 					randPara, items[i].Content.GetText())
 			}
 		}
 	}
+
 	if !foundCreatedItem {
 		t.Errorf("failed to get created Item by UUID")
 	}
-
 }
 
 func TestNoteTagging(t *testing.T) {
-	// SetDebugLogger(log.Println)
-
 	sOutput, err := SignIn(sInput)
+
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	// create base notes
@@ -380,6 +436,7 @@ func TestNoteTagging(t *testing.T) {
 		Session: sOutput.Session,
 		Items:   eItems,
 	}
+
 	_, err = PutItems(pii)
 	if err != nil {
 		t.Errorf(err.Error())
@@ -424,10 +481,10 @@ func TestNoteTagging(t *testing.T) {
 			if !stringInSlice(ref.UUID, animalNoteUUIDs, true) {
 				t.Error("failed to find an animal note reference")
 			}
+
 			if stringInSlice(ref.UUID, foodNoteUUIDs, true) {
 				t.Error("found a food note reference")
 			}
-
 		}
 	}
 
@@ -436,6 +493,7 @@ func TestNoteTagging(t *testing.T) {
 			if !stringInSlice(ref.UUID, foodNoteUUIDs, true) {
 				t.Error("failed to find an food note reference")
 			}
+
 			if stringInSlice(ref.UUID, animalNoteUUIDs, true) {
 				t.Error("found an animal note reference")
 			}
@@ -453,10 +511,12 @@ func TestNoteTagging(t *testing.T) {
 		Items:   eItems,
 		Session: sOutput.Session,
 	}
+
 	_, err = PutItems(pii)
 	if err != nil {
 		t.Errorf("failed to put items: %+v", err)
 	}
+
 	getAnimalNotesFilter := Filter{
 		Type:       "Note",
 		Key:        "TagTitle",
@@ -469,20 +529,29 @@ func TestNoteTagging(t *testing.T) {
 	getAnimalNotesInput := GetItemsInput{
 		Session: sOutput.Session,
 	}
+
 	var getAnimalNotesOutput GetItemsOutput
+
 	getAnimalNotesOutput, err = GetItems(getAnimalNotesInput)
 	if err != nil {
 		t.Error("failed to retrieve animal notes by tag")
+		return
 	}
 
 	var animalNotes Items
+
 	animalNotes, err = getAnimalNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+	if err != nil {
+		return
+	}
+
 	animalNotes.Filter(getAnimalNotesFilters)
 	// check two notes are animal tagged ones
 	animalNoteTitles := []string{
 		dogNote.Content.GetTitle(),
 		gnuNote.Content.GetTitle(),
 	}
+
 	if len(animalNotes) != 2 {
 		t.Errorf("expected two tags, got: %d", len(animalNotes))
 	}
@@ -500,20 +569,23 @@ func TestNoteTagging(t *testing.T) {
 		Key:        "Text",
 		Value:      `not\s(Unix|a vegetable)`,
 	}
+
 	regexFilters := ItemFilters{
 		Filters: []Filter{regexFilter},
 	}
+
 	getNotesInput := GetItemsInput{
 		Session: sOutput.Session,
 	}
+
 	var getNotesOutput GetItemsOutput
+
 	getNotesOutput, err = GetItems(getNotesInput)
-	if err != nil {
-		t.Error("failed to retrieve notes using regex")
-	}
+	assert.NoError(t, err, "failed to retrieve notes using regex")
 
 	var notes Items
 	notes, err = getNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+	assert.NoError(t, err)
 
 	notes.Filter(regexFilters)
 	// check two notes are animal tagged ones
@@ -521,6 +593,7 @@ func TestNoteTagging(t *testing.T) {
 	if len(notes) != len(expectedNoteTitles) {
 		t.Errorf("expected two notes, got: %d", len(notes))
 	}
+
 	for _, fn := range notes {
 		if !stringInSlice(fn.Content.GetTitle(), expectedNoteTitles, true) {
 			t.Errorf("got unexpected result: %s", fn.Content.GetTitle())
@@ -532,6 +605,7 @@ func TestSearchNotesByUUID(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	// create two notes
@@ -540,31 +614,39 @@ func TestSearchNotesByUUID(t *testing.T) {
 		"Dog Fact":    "Dogs can't look up",
 		"GNU":         "Is Not Unix",
 	}
+
 	var cnO PutItemsOutput
-	if cnO, err = _createNotes(sOutput.Session, noteInput); err != nil {
-		t.Errorf("failed to create notes")
-	}
+	cnO, err = _createNotes(sOutput.Session, noteInput)
+	assert.NoError(t, err, "failed to create notes")
+
 	var dogFactUUID string
 
 	var di DecryptedItems
+
 	di, err = cnO.ResponseBody.SavedItems.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	assert.NoError(t, err)
 
 	var dis Items
 	dis, err = di.Parse()
 	assert.NoError(t, err)
+
 	for _, di := range dis {
 		if di.Content.GetTitle() == "Dog Fact" {
 			dogFactUUID = di.UUID
 		}
 	}
+
 	var foundItems Items
+
 	filterOne := Filter{
 		Type:  "Note",
 		Key:   "UUID",
 		Value: dogFactUUID,
 	}
+
 	var itemFilters ItemFilters
 	itemFilters.Filters = []Filter{filterOne}
+
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
 	if err != nil {
 		t.Error(err.Error())
@@ -578,6 +660,7 @@ func TestSearchNotesByUUID(t *testing.T) {
 		if foundItems[0].Content.GetTitle() != "Dog Fact" {
 			t.Errorf("incorrect note returned (title mismatch)")
 		}
+
 		if !strings.Contains(foundItems[0].Content.GetText(), "Dogs can't look up") {
 			t.Errorf("incorrect note returned (text mismatch)")
 		}
@@ -590,6 +673,7 @@ func TestSearchNotesByText(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	// create two notes
@@ -597,19 +681,23 @@ func TestSearchNotesByText(t *testing.T) {
 		"Dog Fact":    "Dogs can't look up",
 		"Cheese Fact": "Cheese is not a vegetable",
 	}
+
 	if _, err = _createNotes(sOutput.Session, noteInput); err != nil {
 		t.Errorf("failed to create notes")
 	}
 	// find one note by text
 	var foundItems Items
+
 	filterOne := Filter{
 		Type:       "Note",
 		Key:        "Text",
 		Comparison: "contains",
 		Value:      "Cheese",
 	}
+
 	var itemFilters ItemFilters
 	itemFilters.Filters = []Filter{filterOne}
+
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
 	if err != nil {
 		t.Error(err.Error())
@@ -622,20 +710,20 @@ func TestSearchNotesByText(t *testing.T) {
 		if foundItems[0].Content.GetTitle() != "Cheese Fact" {
 			t.Errorf("incorrect note returned (title mismatch)")
 		}
+
 		if !strings.Contains(foundItems[0].Content.GetText(), "Cheese is not a vegetable") {
 			t.Errorf("incorrect note returned (text mismatch)")
 		}
 	default:
 		t.Errorf("expected one note but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	// create two notes
@@ -648,14 +736,18 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 	}
 	// find one note by text
 	var foundItems Items
+
 	filterOne := Filter{
 		Type:       "Note",
 		Key:        "Title",
 		Comparison: "~",
 		Value:      "^Do.*",
 	}
+
 	var itemFilters ItemFilters
+
 	itemFilters.Filters = []Filter{filterOne}
+
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
 	if err != nil {
 		t.Error(err.Error())
@@ -668,20 +760,20 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 		if foundItems[0].Content.GetTitle() != "Dog Fact" {
 			t.Errorf("incorrect note returned (title mismatch)")
 		}
+
 		if !strings.Contains(foundItems[0].Content.GetText(), "Dogs can't look up") {
 			t.Errorf("incorrect note returned (text mismatch)")
 		}
 	default:
 		t.Errorf("expected one note but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestSearchTagsByText(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
@@ -690,14 +782,17 @@ func TestSearchTagsByText(t *testing.T) {
 	}
 	// find one note by text
 	var foundItems Items
+
 	filterOne := Filter{
 		Type:       "Tag",
 		Key:        "Title",
 		Comparison: "contains",
 		Value:      "Bungle",
 	}
+
 	var itemFilters ItemFilters
 	itemFilters.Filters = []Filter{filterOne}
+
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
 	if err != nil {
 		t.Error(err.Error())
@@ -712,15 +807,14 @@ func TestSearchTagsByText(t *testing.T) {
 		}
 	default:
 		t.Errorf("expected one tag but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestSearchTagsByRegex(t *testing.T) {
 	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
@@ -729,14 +823,17 @@ func TestSearchTagsByRegex(t *testing.T) {
 	}
 	// find one note by text
 	var foundItems Items
+
 	filterOne := Filter{
 		Type:       "Tag",
 		Key:        "Title",
 		Comparison: "~",
 		Value:      "pp",
 	}
+
 	var itemFilters ItemFilters
 	itemFilters.Filters = []Filter{filterOne}
+
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
 	if err != nil {
 		t.Error(err.Error())
@@ -751,28 +848,31 @@ func TestSearchTagsByRegex(t *testing.T) {
 		}
 	default:
 		t.Errorf("expected one tag but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	newNotes := genNotes(200, 2)
 	assert.NoError(t, newNotes.Validate())
+
 	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
 		Items:   eItems,
 	}
+
 	_, err = PutItems(pii)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
+
 	var retrievedNotes Items
+
 	var cursorToken string
 
 	for {
@@ -781,18 +881,23 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 			CursorToken: cursorToken,
 			BatchSize:   50,
 		}
+
 		var gio GetItemsOutput
+
 		gio, err = GetItems(gii)
-		if err != nil {
-			t.Error(err)
-		}
+		assert.NoError(t, err)
 
 		var di DecryptedItems
 		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+		assert.NoError(t, err)
 
 		var items Items
+
 		items, err = di.Parse()
+		assert.NoError(t, err)
+
 		retrievedNotes = append(retrievedNotes, items...)
+
 		if stripLineBreak(gio.Cursor) == "" {
 			break
 		} else {
@@ -800,6 +905,7 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 		}
 	}
 	retrievedNotes.DeDupe()
+
 	giFilter := Filter{
 		Type:  "Note",
 		Key:   "Deleted",
@@ -808,7 +914,9 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 	giFilters := ItemFilters{
 		Filters: []Filter{giFilter},
 	}
+
 	retrievedNotes.Filter(giFilters)
+
 	if len(retrievedNotes) != 200 {
 		t.Errorf("expected 200 items but got %d\n", len(retrievedNotes))
 	}
@@ -818,6 +926,7 @@ func TestCreateAndGet301Notes(t *testing.T) {
 	numNotes := 301
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
+
 	defer cleanup(&sOutput.Session)
 
 	newNotes := genNotes(numNotes, 10)
@@ -827,12 +936,14 @@ func TestCreateAndGet301Notes(t *testing.T) {
 		Session: sOutput.Session,
 		Items:   eItems,
 	}
+
 	_, err = PutItems(pii)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
+	assert.NoError(t, err)
+
 	var retrievedNotes Items
+
 	var cursorToken string
+
 	giFilter := Filter{
 		Type:  "Note",
 		Key:   "Deleted",
@@ -841,30 +952,38 @@ func TestCreateAndGet301Notes(t *testing.T) {
 	giFilters := ItemFilters{
 		Filters: []Filter{giFilter},
 	}
+
 	for {
 		gii := GetItemsInput{
 			Session:     sOutput.Session,
 			CursorToken: cursorToken,
 		}
+
 		var gio GetItemsOutput
+
 		gio, err = GetItems(gii)
 		if err != nil {
 			t.Error(err)
 		}
+
 		gio.Items.DeDupe()
 
 		var di DecryptedItems
+
 		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
 		if err != nil {
 			t.Error(err)
 		}
+
 		var items Items
+
 		items, err = di.Parse()
 		if err != nil {
 			t.Error(err)
 		}
 
 		retrievedNotes = append(retrievedNotes, items...)
+
 		if stripLineBreak(gio.Cursor) == "" {
 			break
 		} else {
@@ -872,10 +991,13 @@ func TestCreateAndGet301Notes(t *testing.T) {
 		}
 	}
 	retrievedNotes.Filter(giFilters)
+
 	if len(retrievedNotes) != numNotes {
 		t.Errorf("expected %d items but got %d\n", numNotes, len(retrievedNotes))
 	}
+
 	retrievedNotes.Filter(giFilters)
+
 	for i, r := range retrievedNotes {
 		if !strings.HasPrefix(r.Content.GetTitle(), fmt.Sprintf("-%d-", i+1)) {
 			fmt.Println("expected:", i+1, "got", r.Content.GetTitle())
@@ -890,21 +1012,27 @@ func genRandomText(paragraphs int) string {
 	for i := 1; i <= paragraphs; i++ {
 		strBuilder.WriteString(testParas[randInt(0, len(testParas))])
 	}
+
 	return strBuilder.String()
 }
 
 func genNotes(num int, textParas int) (notes Items) {
 	for i := 1; i <= num; i++ {
 		time.Sleep(3 * time.Millisecond)
+
 		noteContent := &NoteContent{
 			Title:          fmt.Sprintf("-%d-,%s", i, "Title"),
 			Text:           fmt.Sprintf("%d,%s", i, genRandomText(textParas)),
 			ItemReferences: ItemReferences{},
 		}
 		noteContent.SetUpdateTime(time.Now())
+
 		newNote := NewNote()
+
 		newNote.Content = noteContent
+
 		notes = append(notes, *newNote)
 	}
+
 	return notes
 }

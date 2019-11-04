@@ -46,6 +46,7 @@ func createHTTPClient() *http.Client {
 		},
 		Timeout: time.Duration(requestTimeout) * time.Second,
 	}
+
 	return client
 }
 

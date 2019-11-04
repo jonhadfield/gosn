@@ -58,6 +58,7 @@ func TestFilterNoteByTagUUID(t *testing.T) {
 		ContentType: "Note",
 	}
 	animalTag.Content.UpsertReferences(ItemReferences{gnuRef})
+
 	cheeseRef := ItemReference{
 		UUID:        cheeseNoteUUID,
 		ContentType: "Note",
@@ -170,7 +171,9 @@ func TestFilterNoteByTagTitle(t *testing.T) {
 		UUID:        gnuNoteUUID,
 		ContentType: "Note",
 	}
+
 	animalTag.Content.UpsertReferences(ItemReferences{gnuRef})
+
 	cheeseRef := ItemReference{
 		UUID:        cheeseNoteUUID,
 		ContentType: "Note",

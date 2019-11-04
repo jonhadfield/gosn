@@ -20,12 +20,15 @@ type Filter struct {
 
 func (i *Items) Filter(f ItemFilters) {
 	var filtered Items
+
 	var tags Items
+
 	for _, i := range *i {
 		if i.ContentType == "Tag" {
 			tags = append(tags, i)
 		}
 	}
+
 	for _, item := range *i {
 		switch item.ContentType {
 		case "Note":
@@ -38,6 +41,7 @@ func (i *Items) Filter(f ItemFilters) {
 			}
 		}
 	}
+
 	*i = filtered
 }
 
@@ -115,12 +119,13 @@ func applyNoteTextFilter(f Filter, i Item, matchAny bool) (result, matchedAll, d
 			}
 		}
 	}
-	return
 
+	return result, matchedAll, done
 }
 
 func applyNoteTagTitleFilter(f Filter, i Item, tags Items, matchAny bool) (result, matchedAll, done bool) {
 	var matchesTag bool
+
 	for _, tag := range tags {
 		if tag.Content == nil {
 			matchedAll = false
@@ -175,12 +180,14 @@ func applyNoteTagTitleFilter(f Filter, i Item, tags Items, matchAny bool) (resul
 				}
 			}
 		}
-	} // end for
-	return
+	}
+
+	return result, matchedAll, done
 }
 
 func applyNoteTagUUIDFilter(f Filter, i Item, tags Items, matchAny bool) (result, matchedAll, done bool) {
 	var matchesTag bool
+
 	for _, tag := range tags {
 		if tag.UUID == f.Value {
 			for _, ref := range tag.Content.References() {
@@ -199,13 +206,16 @@ func applyNoteTagUUIDFilter(f Filter, i Item, tags Items, matchAny bool) (result
 			if matchAny {
 				result = true
 				done = true
+
 				return
 			}
+
 			matchedAll = true
 		} else {
 			if !matchAny {
 				result = false
 				done = true
+
 				return
 			}
 			matchedAll = false
@@ -215,27 +225,33 @@ func applyNoteTagUUIDFilter(f Filter, i Item, tags Items, matchAny bool) (result
 			if matchAny {
 				result = false
 				done = true
+
 				return
 			}
+
 			matchedAll = false
 		} else {
 			if !matchAny {
 				result = true
 				done = true
+
 				return
 			}
 			matchedAll = true
 		}
 	}
-	return
+
+	return result, matchedAll, done
 }
 
 func applyNoteFilters(item Item, itemFilters ItemFilters, tags Items) bool {
 	var matchedAll, result, done bool
+
 	for i, filter := range itemFilters.Filters {
 		if filter.Type != "Note" {
 			continue
 		}
+
 		switch strings.ToLower(filter.Key) {
 		case "title": // GetTitle
 			result, matchedAll, done = applyNoteTitleFilter(filter, item, itemFilters.MatchAny)
@@ -262,6 +278,7 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags Items) bool {
 				if itemFilters.MatchAny {
 					return true
 				}
+
 				matchedAll = true
 			} else {
 				if !itemFilters.MatchAny {
@@ -275,11 +292,13 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags Items) bool {
 				if itemFilters.MatchAny {
 					return true
 				}
+
 				matchedAll = true
 			} else {
 				if !itemFilters.MatchAny {
 					return false
 				}
+
 				matchedAll = false
 			}
 		default:
@@ -290,6 +309,7 @@ func applyNoteFilters(item Item, itemFilters ItemFilters, tags Items) bool {
 			return true
 		}
 	}
+
 	return matchedAll
 }
 
@@ -330,7 +350,6 @@ func applyNoteTitleFilter(f Filter, i Item, matchAny bool) (result, matchedAll, 
 					return
 				}
 				matchedAll = false
-
 			}
 		case "!=":
 			if i.Content.GetTitle() != f.Value {
@@ -356,7 +375,6 @@ func applyNoteTitleFilter(f Filter, i Item, matchAny bool) (result, matchedAll, 
 					return
 				}
 				matchedAll = true
-
 			} else {
 				if !matchAny {
 					result = false
@@ -367,15 +385,18 @@ func applyNoteTitleFilter(f Filter, i Item, matchAny bool) (result, matchedAll, 
 			}
 		}
 	}
-	return
+
+	return result, matchedAll, done
 }
 
 func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 	var matchedAll bool
+
 	for i, filter := range itemFilters.Filters {
 		if filter.Type != "Tag" {
 			continue
 		}
+
 		switch strings.ToLower(filter.Key) {
 		case "title":
 			if item.Content == nil {
@@ -413,7 +434,6 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 							return true
 						}
 						matchedAll = true
-
 					} else {
 						if !itemFilters.MatchAny {
 							return false
@@ -426,7 +446,6 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 							return true
 						}
 						matchedAll = true
-
 					} else {
 						if !itemFilters.MatchAny {
 							return false
@@ -440,12 +459,13 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 				if itemFilters.MatchAny {
 					return true
 				}
-				matchedAll = true
 
+				matchedAll = true
 			} else {
 				if !itemFilters.MatchAny {
 					return false
 				}
+
 				matchedAll = false
 			}
 		default:
@@ -456,5 +476,6 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 			return true
 		}
 	}
+
 	return false
 }

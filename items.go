@@ -29,6 +29,7 @@ type Item struct {
 // returns a new, typeless item
 func newItem() *Item {
 	now := time.Now().UTC().Format(timeLayout)
+
 	return &Item{
 		UUID:      GenUUID(),
 		CreatedAt: now,
@@ -40,6 +41,7 @@ func newItem() *Item {
 func NewNote() *Item {
 	item := newItem()
 	item.ContentType = "Note"
+
 	return item
 }
 
@@ -47,6 +49,7 @@ func NewNote() *Item {
 func NewTag() *Item {
 	item := newItem()
 	item.ContentType = "Tag"
+
 	return item
 }
 
@@ -54,6 +57,7 @@ func NewTag() *Item {
 func NewNoteContent() *NoteContent {
 	c := &NoteContent{}
 	c.SetUpdateTime(time.Now().UTC())
+
 	return c
 }
 
@@ -61,6 +65,7 @@ func NewNoteContent() *NoteContent {
 func NewTagContent() *TagContent {
 	c := &TagContent{}
 	c.SetUpdateTime(time.Now().UTC())
+
 	return c
 }
 
@@ -149,30 +154,38 @@ func (ei EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
 
 	for _, eItem := range ei {
 		var item DecryptedItem
+
 		if eItem.EncItemKey != "" {
 			var decryptedEncItemKey string
+
 			decryptedEncItemKey, err = decryptString(eItem.EncItemKey, Mk, Ak, eItem.UUID)
 			if err != nil {
 				return
 			}
+
 			itemEncryptionKey := decryptedEncItemKey[:len(decryptedEncItemKey)/2]
 			itemAuthKey := decryptedEncItemKey[len(decryptedEncItemKey)/2:]
+
 			var decryptedContent string
+
 			decryptedContent, err = decryptString(eItem.Content, itemEncryptionKey, itemAuthKey, eItem.UUID)
 			if err != nil {
 				return
 			}
+
 			item.Content = decryptedContent
 		}
+
 		item.UUID = eItem.UUID
 		item.Deleted = eItem.Deleted
 		item.ContentType = eItem.ContentType
 		item.UpdatedAt = eItem.UpdatedAt
 		item.CreatedAt = eItem.CreatedAt
+
 		o = append(o, item)
 	}
 
-	return
+	return o, err
 }
 
 func (ei EncryptedItems) DecryptAndParse(Mk, Ak string) (o Items, err error) {
@@ -180,11 +193,14 @@ func (ei EncryptedItems) DecryptAndParse(Mk, Ak string) (o Items, err error) {
 	debug(funcName, fmt.Errorf("items: %d", len(ei)))
 
 	var di DecryptedItems
+
 	di, err = ei.Decrypt(Mk, Ak)
 	if err != nil {
 		return
 	}
+
 	o, err = di.Parse()
+
 	return
 }
 
@@ -221,7 +237,8 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	output.SyncToken = sResp.SyncToken
 	// strip any duplicates (https://github.com/standardfile/rails-engine/issues/5)
 	debug(funcName, fmt.Errorf("sync token: %+v", stripLineBreak(output.SyncToken)))
-	return
+
+	return output, err
 }
 
 // PutItemsInput defines the input used to put items
@@ -238,6 +255,7 @@ type PutItemsOutput struct {
 
 func (i *Items) Validate() error {
 	var updatedTime time.Time
+
 	var err error
 	// TODO finish item validation
 	for _, item := range *i {
@@ -248,6 +266,7 @@ func (i *Items) Validate() error {
 				if err != nil {
 					return err
 				}
+
 				switch {
 				case item.Content.GetTitle() == "":
 					err = fmt.Errorf("failed to create \"%s\" due to missing title: \"%s\"",
@@ -259,12 +278,14 @@ func (i *Items) Validate() error {
 					err = fmt.Errorf("failed to create \"%s\" due to missing created at date: \"%s\"",
 						item.ContentType, item.Content.GetTitle())
 				}
+
 				if err != nil {
 					return err
 				}
 			}
 		}
 	}
+
 	return err
 }
 
@@ -280,11 +301,13 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 
 	// for each page size, send to push and get response
 	syncToken := stripLineBreak(i.SyncToken)
+
 	var savedItems []EncryptedItem
 
 	// put items in big chunks, default being page size
 	for x := 0; x < len(i.Items); x += PageSize {
 		var finalChunk bool
+
 		var lastItemInChunkIndex int
 		// if current big chunk > num encrypted items then it's the last
 		if x+PageSize >= len(i.Items) {
@@ -293,10 +316,13 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 		} else {
 			lastItemInChunkIndex = x + PageSize
 		}
+
 		debug(funcName, fmt.Sprintf("putting items: %d to %d", x+1, lastItemInChunkIndex+1))
 
 		bigChunkSize := (lastItemInChunkIndex - x) + 1
+
 		fullChunk := i.Items[x : lastItemInChunkIndex+1]
+
 		var subChunkStart, subChunkEnd int
 		subChunkStart = x
 		subChunkEnd = lastItemInChunkIndex
@@ -305,6 +331,7 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 		// keep trying to push chunk of encrypted items in reducing subChunk sizes until it succeeds
 		maxAttempts := 20
 		try.MaxRetries = 20
+
 		for {
 			rErr := try.Do(func(attempt int) (bool, error) {
 				var rErr error
@@ -333,6 +360,7 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 			if totalPut < bigChunkSize {
 				subChunkStart = subChunkEnd + 1
 				subChunkEnd = lastItemInChunkIndex
+
 				continue
 			}
 
@@ -344,8 +372,8 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 			if totalPut == len(fullChunk) {
 				break
 			}
-
 		} // end infinite for loop for subset
+
 		if finalChunk {
 			break
 		}
@@ -354,7 +382,7 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 	output.ResponseBody.SyncToken = syncToken
 	output.ResponseBody.SavedItems = savedItems
 
-	return
+	return output, err
 }
 
 func resizePutForRetry(start, end, numBytes int) int {
@@ -365,19 +393,23 @@ func resizePutForRetry(start, end, numBytes int) int {
 	if numBytes > 2000000 {
 		multiplier = 0.50
 	}
+
 	end = int(math.Ceil(float64(end) * multiplier))
 	if end <= start {
 		end = start + 1
 	}
+
 	if preShrink == end && preShrink > 1 {
 		end--
 	}
+
 	return end
 }
 
 func putChunk(session Session, encItemJSON []byte) (savedItems []EncryptedItem, syncToken string, err error) {
 	reqBody := []byte(`{"items":` + string(encItemJSON) +
 		`,"sync_token":"` + stripLineBreak(syncToken) + `"}`)
+
 	var syncRespBodyBytes []byte
 
 	syncRespBodyBytes, err = makeSyncRequest(session, reqBody)
@@ -387,6 +419,7 @@ func putChunk(session Session, encItemJSON []byte) (savedItems []EncryptedItem, 
 
 	// get item results from API response
 	var bodyContent syncResponse
+
 	bodyContent, err = getBodyContent(syncRespBodyBytes)
 	if err != nil {
 		return
@@ -394,6 +427,7 @@ func putChunk(session Session, encItemJSON []byte) (savedItems []EncryptedItem, 
 	// Get new items
 	syncToken = stripLineBreak(bodyContent.SyncToken)
 	savedItems = bodyContent.SavedItems
+
 	return
 }
 
@@ -474,8 +508,10 @@ type UpdateItemRefsOutput struct {
 
 func UpdateItemRefs(i UpdateItemRefsInput) UpdateItemRefsOutput {
 	var updated Items // updated tags
+
 	for _, item := range i.Items {
 		var refs ItemReferences
+
 		for _, tr := range i.ToRef {
 			ref := ItemReference{
 				UUID:        tr.UUID,
@@ -483,9 +519,11 @@ func UpdateItemRefs(i UpdateItemRefsInput) UpdateItemRefsOutput {
 			}
 			refs = append(refs, ref)
 		}
+
 		item.Content.UpsertReferences(refs)
 		updated = append(updated, item)
 	}
+
 	return UpdateItemRefsOutput{
 		Items: updated,
 	}
@@ -500,11 +538,13 @@ func (tagContent *TagContent) SetReferences(newRefs ItemReferences) {
 func (tagContent *TagContent) UpsertReferences(newRefs ItemReferences) {
 	for _, newRef := range newRefs {
 		var found bool
+
 		for _, existingRef := range tagContent.ItemReferences {
 			if existingRef.UUID == newRef.UUID {
 				found = true
 			}
 		}
+
 		if !found {
 			tagContent.ItemReferences = append(tagContent.ItemReferences, newRef)
 		}
@@ -514,11 +554,13 @@ func (tagContent *TagContent) UpsertReferences(newRefs ItemReferences) {
 func (noteContent *NoteContent) UpsertReferences(newRefs ItemReferences) {
 	for _, newRef := range newRefs {
 		var found bool
+
 		for _, existingRef := range noteContent.ItemReferences {
 			if existingRef.UUID == newRef.UUID {
 				found = true
 			}
 		}
+
 		if !found {
 			noteContent.ItemReferences = append(noteContent.ItemReferences, newRef)
 		}
@@ -529,6 +571,7 @@ func makeSyncRequest(session Session, reqBody []byte) (responseBody []byte, err 
 	funcName := funcNameOutputStart + "makeSyncRequest" + funcNameOutputEnd
 
 	var request *http.Request
+
 	request, err = http.NewRequest(http.MethodPost, session.Server+syncPath, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return
@@ -536,39 +579,48 @@ func makeSyncRequest(session Session, reqBody []byte) (responseBody []byte, err 
 
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer "+session.Token)
+
 	var response *http.Response
+
 	response, err = httpClient.Do(request)
 	if err != nil {
 		return
 	}
+
 	defer func() {
 		if err := response.Body.Close(); err != nil {
 			fmt.Println("failed to close connection")
 		}
 	}()
+
 	switch response.StatusCode {
 	case 413:
 		err = errors.New("payload too large")
 		return
 	}
+
 	if response.StatusCode > 400 {
 		debug(funcName, fmt.Errorf("sync of %d req bytes failed with: %s", len(reqBody), response.Status))
 		return
 	}
+
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
 		debug(funcName, fmt.Errorf("sync of %d req bytes succeeded with: %s", len(reqBody), response.Status))
 	}
+
 	responseBody, err = getResponseBody(response)
 	if err != nil {
 		return
 	}
-	return
+
+	return responseBody, err
 }
 
 func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
 	funcName := funcNameOutputStart + "getItemsViaAPI" + funcNameOutputEnd
 	// determine how many items to retrieve with each call
 	var limit int
+
 	switch {
 	case input.BatchSize > 0:
 		debug(funcName, fmt.Sprintf("input.BatchSize: %d", input.BatchSize))
@@ -581,15 +633,19 @@ func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
 		debug(funcName, fmt.Sprintf("default - limit: %d", PageSize))
 		limit = PageSize
 	}
+
 	debug(funcName, fmt.Sprintf("using limit: %d", limit))
+
 	var requestBody []byte
 	// generate request body
 	switch {
 	case input.CursorToken == "":
 		debug(funcName, "cursor is empty")
+
 		requestBody = []byte(`{"limit":` + strconv.Itoa(limit) + `}`)
 	case input.CursorToken == "null":
 		debug(funcName, "\ncursor is null")
+
 		requestBody = []byte(`{"limit":` + strconv.Itoa(limit) +
 			`,"items":[],"sync_token":"` + input.SyncToken + `\n","cursor_token":null}`)
 	case input.CursorToken != "":
@@ -602,6 +658,7 @@ func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
 
 	// make the request
 	debug(funcName, fmt.Sprintf("making request: %s", stripLineBreak(string(requestBody))))
+
 	responseBody, err := makeSyncRequest(input.Session, requestBody)
 	if err != nil {
 		return
@@ -609,36 +666,45 @@ func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
 
 	// get encrypted items from API response
 	var bodyContent syncResponse
+
 	bodyContent, err = getBodyContent(responseBody)
 	if err != nil {
 		return
 	}
+
 	out.Items = bodyContent.Items
 	out.SavedItems = bodyContent.SavedItems
 	out.Unsaved = bodyContent.Unsaved
 	out.SyncToken = bodyContent.SyncToken
 	out.CursorToken = bodyContent.CursorToken
+
 	if input.BatchSize > 0 {
 		return
 	}
 
 	if bodyContent.CursorToken != "" && bodyContent.CursorToken != "null" {
 		var newOutput syncResponse
+
 		input.SyncToken = out.SyncToken
 		input.CursorToken = out.CursorToken
 		input.PageSize = limit
+
 		newOutput, err = getItemsViaAPI(input)
+
 		if err != nil {
 			return
 		}
+
 		out.Items = append(out.Items, newOutput.Items...)
 		out.SavedItems = append(out.Items, newOutput.SavedItems...)
 		out.Unsaved = append(out.Items, newOutput.Unsaved...)
 	} else {
 		return out, err
 	}
+
 	out.CursorToken = ""
-	return
+
+	return out, err
 }
 
 // ItemReference defines a reference from one item to another
@@ -667,6 +733,7 @@ func (noteContent *NoteContent) GetUpdateTime() (time.Time, error) {
 	if noteContent.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
 		return time.Time{}, fmt.Errorf("notset")
 	}
+
 	return time.Parse(timeLayout, noteContent.AppData.OrgStandardNotesSN.ClientUpdatedAt)
 }
 
@@ -674,8 +741,8 @@ func (tagContent *TagContent) GetUpdateTime() (time.Time, error) {
 	if tagContent.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
 		return time.Time{}, fmt.Errorf("notset")
 	}
-	return time.Parse(timeLayout, tagContent.AppData.OrgStandardNotesSN.ClientUpdatedAt)
 
+	return time.Parse(timeLayout, tagContent.AppData.OrgStandardNotesSN.ClientUpdatedAt)
 }
 
 func (noteContent *NoteContent) SetUpdateTime(uTime time.Time) {
@@ -763,104 +830,127 @@ type Items []Item
 func (di *DecryptedItems) Parse() (p Items, err error) {
 	for _, i := range *di {
 		var processedItem Item
+
 		processedItem.ContentType = i.ContentType
+
 		if !i.Deleted {
 			processedItem.Content, err = processContentModel(i.ContentType, i.Content)
 			if err != nil {
 				return
 			}
 		}
+
 		var cAt, uAt time.Time
+
 		cAt, err = time.Parse(timeLayout, i.CreatedAt)
 		if err != nil {
 			return
 		}
+
 		processedItem.CreatedAt = cAt.Format(timeLayout)
+
 		uAt, err = time.Parse(timeLayout, i.UpdatedAt)
 		if err != nil {
 			return
 		}
+
 		processedItem.UpdatedAt = uAt.Format(timeLayout)
 		processedItem.Deleted = i.Deleted
 		processedItem.UUID = i.UUID
+
 		if processedItem.Content != nil {
 			if processedItem.Content.GetTitle() != "" {
 				processedItem.ContentSize += len(processedItem.Content.GetTitle())
 			}
+
 			if processedItem.Content.GetText() != "" {
 				processedItem.ContentSize += len(processedItem.Content.GetText())
 			}
 		}
+
 		p = append(p, processedItem)
 	}
-	return
+
+	return p, err
 }
 
 func processContentModel(contentType, input string) (output ClientStructure, err error) {
 	// identify content model
 	// try and unmarshall Item
 	var itemContent NoteContent
+
 	switch contentType {
 	case "Note":
 		err = json.Unmarshal([]byte(input), &itemContent)
 		return &itemContent, err
-
 	case "Tag":
 		var tagContent TagContent
 		err = json.Unmarshal([]byte(input), &tagContent)
+
 		return &tagContent, err
 	}
+
 	return
 }
 
 func (ei *EncryptedItems) DeDupe() {
 	var encountered []string
+
 	var deDuped EncryptedItems
+
 	for _, i := range *ei {
 		if !stringInSlice(i.UUID, encountered, true) {
 			deDuped = append(deDuped, i)
 		}
+
 		encountered = append(encountered, i.UUID)
 	}
+
 	*ei = deDuped
 }
 
 func (i *Items) DeDupe() {
 	var encountered []string
+
 	var deDuped Items
+
 	for _, j := range *i {
 		if !stringInSlice(j.UUID, encountered, true) {
 			deDuped = append(deDuped, j)
 		}
+
 		encountered = append(encountered, j.UUID)
 	}
+
 	*i = deDuped
 }
 
 func (tagContent TagContent) Equals(e TagContent) bool {
-	if tagContent.Title != e.Title {
-		return false
-	}
 	// TODO: compare references
-	return true
+	return tagContent.Title == e.Title
 }
 
 func (item Item) Equals(e Item) bool {
 	if item.UUID != e.UUID {
 		return false
 	}
+
 	if item.ContentType != e.ContentType {
 		return false
 	}
+
 	if item.Deleted != e.Deleted {
 		return false
 	}
+
 	if item.Content.GetTitle() != e.Content.GetTitle() {
 		return false
 	}
+
 	if item.Content.GetText() != e.Content.GetText() {
 		return false
 	}
+
 	return true
 }
 
@@ -870,6 +960,7 @@ func (noteContent NoteContent) Copy() *NoteContent {
 	res.Text = noteContent.Text
 	res.AppData = noteContent.AppData
 	res.ItemReferences = noteContent.ItemReferences
+
 	return res
 }
 func (tagContent TagContent) Copy() *TagContent {
@@ -877,26 +968,29 @@ func (tagContent TagContent) Copy() *TagContent {
 	res.Title = tagContent.Title
 	res.AppData = tagContent.AppData
 	res.ItemReferences = tagContent.ItemReferences
+
 	return res
 }
 
 func (item Item) Copy() *Item {
 	res := new(Item)
+
 	switch item.Content.(type) {
 	case *NoteContent:
 		tContent := item.Content.(*NoteContent)
 		res.Content = tContent.Copy()
-
 	case *TagContent:
 		tContent := item.Content.(*TagContent)
 		res.Content = tContent.Copy()
 	default:
 		fmt.Printf("unable to copy items with content of type: %s", reflect.TypeOf(item.Content))
 	}
+
 	res.UpdatedAt = item.UpdatedAt
 	res.CreatedAt = item.CreatedAt
 	res.ContentSize = item.ContentSize
 	res.ContentType = item.ContentType
 	res.UUID = item.UUID
+
 	return res
 }

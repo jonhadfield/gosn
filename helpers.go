@@ -14,6 +14,7 @@ func stripLineBreak(input string) string {
 	if strings.HasSuffix(input, "\n") {
 		return input[:len(input)-1]
 	}
+
 	return input
 }
 
@@ -27,15 +28,17 @@ func stringInSlice(inStr string, inSlice []string, matchCase bool) bool {
 	for i := range inSlice {
 		if matchCase && inStr == inSlice[i] {
 			return true
-		} else if strings.ToLower(inStr) == strings.ToLower(inSlice[i]) {
+		} else if strings.EqualFold(inStr, inSlice[i]) {
 			return true
 		}
 	}
+
 	return false
 }
 
 func getResponseBody(resp *http.Response) (body []byte, err error) {
 	var output io.ReadCloser
+
 	switch resp.Header.Get("Content-Encoding") {
 	case "gzip":
 		output, err = gzip.NewReader(resp.Body)
@@ -45,11 +48,15 @@ func getResponseBody(resp *http.Response) (body []byte, err error) {
 	default:
 		output = resp.Body
 	}
+
 	buf := new(bytes.Buffer)
+
 	_, err = buf.ReadFrom(output)
 	if err != nil {
 		return
 	}
+
 	body = buf.Bytes()
+
 	return
 }

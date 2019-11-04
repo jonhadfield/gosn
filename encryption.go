@@ -18,15 +18,14 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func unPad(cipherText []byte) ([]byte, error) {
+func unPad(cipherText []byte) []byte {
 	c := cipherText[len(cipherText)-1]
 	n := int(c)
-	return cipherText[:len(cipherText)-n], nil
+
+	return cipherText[:len(cipherText)-n]
 }
 
 func decryptString(stringToDecrypt, encryptionKey, authKey, uuid string) (output string, err error) {
-	//funcName := funcNameOutputStart + "decryptString" + funcNameOutputEnd
-
 	components := strings.Split(stringToDecrypt, ":")
 
 	version := components[0]
@@ -40,13 +39,18 @@ func decryptString(stringToDecrypt, encryptionKey, authKey, uuid string) (output
 			localUUID, uuid)
 		return
 	}
+
 	stringToAuth := fmt.Sprintf("%s:%s:%s:%s", version, localUUID, IV, cipherText)
+
 	var deHexedAuthKey []byte
+
 	deHexedAuthKey, err = hex.DecodeString(authKey)
 	if err != nil {
 		return
 	}
+
 	localAuthHasher := hmac.New(sha256.New, deHexedAuthKey)
+
 	_, err = localAuthHasher.Write([]byte(stringToAuth))
 	if err != nil {
 		return
@@ -60,41 +64,45 @@ func decryptString(stringToDecrypt, encryptionKey, authKey, uuid string) (output
 	}
 
 	var deHexedEncKey []byte
+
 	deHexedEncKey, err = hex.DecodeString(encryptionKey)
 	if err != nil {
 		return
 	}
+
 	var aesCipher cipher.Block
+
 	aesCipher, err = aes.NewCipher(deHexedEncKey)
 	if err != nil {
 		return
 	}
+
 	unHexedIv, _ := hex.DecodeString(IV)
 	mode := cipher.NewCBCDecrypter(aesCipher, unHexedIv)
+
 	var b64DecodedCipherText []byte
+
 	b64DecodedCipherText, err = base64.StdEncoding.DecodeString(cipherText)
 	if err != nil {
 		return
 	}
+
 	mode.CryptBlocks(b64DecodedCipherText, b64DecodedCipherText)
-	b64DecodedCipherText, err = unPad(b64DecodedCipherText)
-	if err != nil {
-		return
-	}
+
+	b64DecodedCipherText = unPad(b64DecodedCipherText)
 
 	output = string(b64DecodedCipherText)
 
-	return
+	return output, err
 }
 
 func encryptString(stringToEncrypt, encryptionKey, authKey, uuid string, IVOverride []byte) (result string, err error) {
-	//funcName := funcNameOutputStart + "decryptString" + funcNameOutputEnd
-
 	bytesToEncrypt := []byte(stringToEncrypt)
 	bytesToEncrypt = padToAESBlockSize(bytesToEncrypt)
 
 	// hex decode encryption key
 	var deHexedEncKey []byte
+
 	deHexedEncKey, err = hex.DecodeString(encryptionKey)
 	if err != nil {
 		return
@@ -113,10 +121,12 @@ func encryptString(stringToEncrypt, encryptionKey, authKey, uuid string, IVOverr
 
 	// create cipher block
 	var aesCipher cipher.Block
+
 	aesCipher, err = aes.NewCipher(deHexedEncKey)
 	if err != nil {
 		return
 	}
+
 	cipherText := make([]byte, len(bytesToEncrypt))
 
 	mode := cipher.NewCBCEncrypter(aesCipher, IV)
@@ -125,6 +135,7 @@ func encryptString(stringToEncrypt, encryptionKey, authKey, uuid string, IVOverr
 	cipherText = []byte(b64EncodedCipher)
 
 	var deHexedAuthKey []byte
+
 	deHexedAuthKey, err = hex.DecodeString(authKey)
 	if err != nil {
 		return
@@ -135,6 +146,7 @@ func encryptString(stringToEncrypt, encryptionKey, authKey, uuid string, IVOverr
 	stringToAuth := fmt.Sprintf("003:%s:%s:%s", uuid, IVString, string(cipherText))
 
 	localAuthHasher := hmac.New(sha256.New, deHexedAuthKey)
+
 	_, err = localAuthHasher.Write([]byte(stringToAuth))
 	if err != nil {
 		return
@@ -143,7 +155,8 @@ func encryptString(stringToEncrypt, encryptionKey, authKey, uuid string, IVOverr
 	localAuthHash := hex.EncodeToString(localAuthHasher.Sum(nil))
 
 	result = fmt.Sprintf("003:%s:%s:%s:%s", localAuthHash, uuid, IVString, cipherText)
-	return
+
+	return result, err
 }
 
 func generateEncryptedPasswordAndKeys(input generateEncryptedPasswordInput) (pw, mk, ak string, err error) {
@@ -151,6 +164,7 @@ func generateEncryptedPasswordAndKeys(input generateEncryptedPasswordInput) (pw,
 		err = fmt.Errorf("password cost too low")
 		return
 	}
+
 	saltSource := input.Identifier + ":" + "SF" + ":" + input.Version + ":" + strconv.Itoa(int(input.PasswordCost)) + ":" + input.PasswordNonce
 	h := sha256.New()
 	h.Write([]byte(saltSource))
@@ -163,6 +177,7 @@ func generateEncryptedPasswordAndKeys(input generateEncryptedPasswordInput) (pw,
 	pw = hexedHashedPassword[:splitLength]
 	mk = hexedHashedPassword[splitLength : splitLength*2]
 	ak = hexedHashedPassword[splitLength*2 : splitLength*3]
+
 	return
 }
 
@@ -171,6 +186,7 @@ func getBodyContent(input []byte) (output syncResponse, err error) {
 	if err != nil {
 		return
 	}
+
 	return
 }
 
@@ -179,17 +195,20 @@ func padToAESBlockSize(b []byte) []byte {
 	pb := make([]byte, len(b)+n)
 	copy(pb, b)
 	copy(pb[len(b):], bytes.Repeat([]byte{byte(n)}, n))
+
 	return pb
 }
 
 func encryptItems(decItems *Items, mk, ak string) (encryptedItems EncryptedItems, err error) {
 	funcName := funcNameOutputStart + "encryptItems" + funcNameOutputEnd
 	debug(funcName, fmt.Errorf("encrypting %d items", len(*decItems)))
+
 	for _, decItem := range *decItems {
 		var e EncryptedItem
 		e, err = encryptItem(decItem, mk, ak)
 		encryptedItems = append(encryptedItems, e)
 	}
+
 	return
 }
 
@@ -199,10 +218,12 @@ func encryptItem(item Item, mk, ak string) (encryptedItem EncryptedItem, err err
 	encryptedItem.Deleted = item.Deleted
 	// Generate Item Key
 	itemKeyBytes := make([]byte, 64)
+
 	_, err = crand.Read(itemKeyBytes)
 	if err != nil {
 		panic(err)
 	}
+
 	itemKey := hex.EncodeToString(itemKeyBytes)
 	// get Item Encryption Key
 	itemEncryptionKey := itemKey[:len(itemKey)/2]
@@ -210,7 +231,9 @@ func encryptItem(item Item, mk, ak string) (encryptedItem EncryptedItem, err err
 	itemAuthKey := itemKey[len(itemKey)/2:]
 	// encrypt Item Content
 	var encryptedContent string
+
 	mContent, _ := json.Marshal(item.Content)
+
 	encryptedContent, err = encryptString(string(mContent), itemEncryptionKey, itemAuthKey, item.UUID, nil)
 	if err != nil {
 		return
@@ -219,13 +242,15 @@ func encryptItem(item Item, mk, ak string) (encryptedItem EncryptedItem, err err
 	encryptedItem.Content = encryptedContent
 
 	var encryptedKey string
+
 	encryptedKey, err = encryptString(itemKey, mk, ak, item.UUID, nil)
 	if err != nil {
 		return
 	}
+
 	encryptedItem.EncItemKey = encryptedKey
 	encryptedItem.UUID = item.UUID
 	encryptedItem.ContentType = item.ContentType
 
-	return
+	return encryptedItem, err
 }

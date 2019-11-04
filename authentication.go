@@ -41,30 +41,37 @@ type authParamsOutput struct {
 
 func requestToken(client *http.Client, input signInInput) (signInSuccess signInResponse, signInFailure errorResponse, err error) {
 	var reqBodyBytes []byte
+
 	var reqBody string
+
 	if input.tokenName != "" {
 		reqBody = `{"password":"` + input.encPassword + `","email":"` + input.email + `","` + input.tokenName + `":"` + input.tokenValue + `"}`
 	} else {
 		reqBody = `{"password":"` + input.encPassword + `","email":"` + input.email + `"}`
-
 	}
+
 	reqBodyBytes = []byte(reqBody)
 
 	var signInURLReq *http.Request
+
 	signInURLReq, err = http.NewRequest(http.MethodPost, input.signInURL, bytes.NewBuffer(reqBodyBytes))
-	signInURLReq.Header.Set("Content-Type", "application/json")
 	if err != nil {
 		return
 	}
 
+	signInURLReq.Header.Set("Content-Type", "application/json")
+
 	var signInResp *http.Response
+
 	signInResp, err = client.Do(signInURLReq)
 	if err != nil {
 		return signInSuccess, signInFailure, err
 	}
+
 	defer signInResp.Body.Close()
 
 	var signInRespBody []byte
+
 	signInRespBody, err = getResponseBody(signInResp)
 	if err != nil {
 		return
@@ -79,11 +86,14 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 	if err != nil {
 		return
 	}
+
 	return signInSuccess, signInFailure, err
 }
 
 func processDoAuthRequestResponse(response *http.Response) (output doAuthRequestOutput, errResp errorResponse, err error) {
-	body, err := getResponseBody(response)
+	var body []byte
+	body, err = getResponseBody(response)
+
 	switch response.StatusCode {
 	case 200:
 		err = json.Unmarshal(body, &output)
@@ -103,6 +113,7 @@ func processDoAuthRequestResponse(response *http.Response) (output doAuthRequest
 		err = fmt.Errorf("unhandled: %+v", response)
 		return
 	}
+
 	return
 }
 
@@ -120,6 +131,7 @@ type errorResponse struct {
 func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err error) {
 	// make initial params request without mfa token
 	var url string
+
 	var body io.Reader
 
 	if input.tokenName == "" {
@@ -129,37 +141,47 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 		// request with mfa
 		url = input.authParamsURL + "?email=" + input.email + "&" + input.tokenName + "=" + input.tokenValue
 	}
+
 	var req *http.Request
+
 	req, err = http.NewRequest(http.MethodGet, url, body)
 	if err != nil {
 		return
 	}
+
 	var response *http.Response
+
 	response, err = httpClient.Do(req)
 	if err != nil {
 		return
 	}
+
 	defer response.Body.Close()
 
 	var requestOutput doAuthRequestOutput
+
 	var errResp errorResponse
+
 	requestOutput, errResp, err = processDoAuthRequestResponse(response)
 	if err != nil {
 		return
 	}
+
 	output.Identifier = requestOutput.Identifier
 	output.Version = requestOutput.Version
 	output.PasswordCost = requestOutput.PasswordCost
 	output.PasswordNonce = requestOutput.PasswordNonce
 	output.PasswordSalt = requestOutput.PasswordSalt
 	output.mfaKEY = errResp.Error.Payload.MFAKey
-	return
+
+	return output, err
 }
 
 func getAuthParams(input authParamsInput) (output authParamsOutput, err error) {
 	var authRequestOutput doAuthRequestOutput
 	if input.tokenName == "" {
 		authRequestOutput, err = doAuthParamsRequest(input)
+
 		output.Identifier = authRequestOutput.Identifier
 		output.PasswordCost = authRequestOutput.PasswordCost
 		output.PasswordNonce = authRequestOutput.PasswordNonce
@@ -171,6 +193,7 @@ func getAuthParams(input authParamsInput) (output authParamsOutput, err error) {
 			err = fmt.Errorf("requestMFA")
 			return
 		}
+
 		if err != nil {
 			return
 		}
@@ -192,6 +215,7 @@ func getAuthParamsWithMFA(input authParamsInput) (output authParamsOutput, err e
 	output.Version = authRequestOutput.Version
 	output.PasswordSalt = authRequestOutput.PasswordSalt
 	output.TokenName = input.tokenName
+
 	return
 }
 
@@ -253,6 +277,7 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 	if input.APIServer == "" {
 		input.APIServer = apiServer
 	}
+
 	getAuthParamsInput := authParamsInput{
 		email:         input.Email,
 		password:      input.Password,
@@ -263,14 +288,19 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 
 	// request authentication parameters
 	var getAuthParamsOutput authParamsOutput
+
 	getAuthParamsOutput, err = getAuthParams(getAuthParamsInput)
-	output.TokenName = getAuthParamsOutput.TokenName
 	if err != nil {
 		return
 	}
+
+	output.TokenName = getAuthParamsOutput.TokenName
+
 	// generate encrypted password
 	var encPassword string
+
 	var genEncPasswordInput generateEncryptedPasswordInput
+
 	genEncPasswordInput.userPassword = input.Password
 	genEncPasswordInput.Identifier = input.Email
 	genEncPasswordInput.TokenName = getAuthParamsOutput.TokenName
@@ -280,6 +310,7 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 	genEncPasswordInput.Version = getAuthParamsOutput.Version
 
 	var mk, ak string
+
 	encPassword, mk, ak, err = generateEncryptedPasswordAndKeys(genEncPasswordInput)
 	if err != nil {
 		return
@@ -287,6 +318,7 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 
 	// request token
 	var tokenResp signInResponse
+
 	var requestTokenFailure errorResponse
 	tokenResp, requestTokenFailure, err = requestToken(httpClient, signInInput{
 		email:       input.Email,
@@ -295,15 +327,22 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 		tokenValue:  input.TokenVal,
 		signInURL:   input.APIServer + signInPath,
 	})
+
+	if err != nil {
+		return
+	}
+
 	if requestTokenFailure.Error.Message != "" {
 		err = fmt.Errorf(strings.ToLower(requestTokenFailure.Error.Message))
 		return
 	}
+
 	output.Session.Mk = mk
 	output.Session.Ak = ak
 	output.Session.Token = tokenResp.Token
 	output.Session.Server = input.APIServer
-	return
+
+	return output, err
 }
 
 type RegisterInput struct {
@@ -314,21 +353,27 @@ type RegisterInput struct {
 
 func processDoRegisterRequestResponse(response *http.Response) (token string, err error) {
 	var body []byte
+
 	body, err = getResponseBody(response)
 	if err != nil {
 		return
 	}
+
 	switch response.StatusCode {
 	case 200:
 		var output registerResponse
+
 		err = json.Unmarshal(body, &output)
+
 		if err != nil {
 			return
 		}
+
 		token = output.Token
 	case 404:
 		// email address not recognised
 		var errResp errorResponse
+
 		err = json.Unmarshal(body, &errResp)
 		if err != nil {
 			err = fmt.Errorf("email address not recognised")
@@ -337,6 +382,7 @@ func processDoRegisterRequestResponse(response *http.Response) (token string, er
 	case 401:
 		// unmarshal error response
 		var errResp errorResponse
+
 		err = json.Unmarshal(body, &errResp)
 		if errResp.Error.Message != "" {
 			err = fmt.Errorf("email is already registered")
@@ -347,7 +393,7 @@ func processDoRegisterRequestResponse(response *http.Response) (token string, er
 		return
 	}
 
-	return
+	return token, err
 }
 
 // Register creates a new user token
@@ -355,39 +401,46 @@ func processDoRegisterRequestResponse(response *http.Response) (token string, er
 func (input RegisterInput) Register() (token string, err error) {
 	var pw, pwNonce string
 	pw, pwNonce, err = generateInitialKeysAndAuthParamsForUser(input.Email, input.Password)
+
 	var req *http.Request
 
 	reqBody := `{"email":"` + input.Email + `","identifier":"` + input.Email + `","password":"` + pw + `","pw_cost":"` + strconv.Itoa(defaultPasswordCost) + `","pw_nonce":"` + pwNonce + `","version":"` + defaultSNVersion + `"}`
 	reqBodyBytes := []byte(reqBody)
 
 	req, err = http.NewRequest(http.MethodPost, input.APIServer+authRegisterPath, bytes.NewBuffer(reqBodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	req.Host = input.APIServer
-
 	if err != nil {
 		return
 	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Host = input.APIServer
+
 	var response *http.Response
+
 	response, err = httpClient.Do(req)
 	if err != nil {
 		return
 	}
+
 	defer response.Body.Close()
+
 	token, err = processDoRegisterRequestResponse(response)
 	if err != nil {
 		return
 	}
-	return
+
+	return token, err
 }
 
 func generateInitialKeysAndAuthParamsForUser(email, password string) (pw, pwNonce string, err error) {
-
 	var genInput generateEncryptedPasswordInput
 	genInput.userPassword = password
 	genInput.Version = defaultSNVersion
 	genInput.Identifier = email
 	genInput.PasswordCost = defaultPasswordCost
+
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+
 	b := make([]rune, 65)
 	for i := range b {
 		b[i] = letterRunes[mathrand.Intn(len(letterRunes))]
@@ -408,11 +461,14 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 		Password:  password,
 		APIServer: apiServer,
 	}
+
 	sOutput, signInErr := SignIn(sInput)
 	if signInErr != nil {
 		if signInErr.Error() == "requestMFA" {
 			var tokenValue string
+
 			fmt.Print("token: ")
+
 			_, err = fmt.Scanln(&tokenValue)
 			if err != nil {
 				return
@@ -423,6 +479,7 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 			sOutput, signInErr = SignIn(sInput)
 
 			session = sOutput.Session
+
 			if signInErr != nil {
 				err = signInErr
 				return
@@ -431,6 +488,8 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 			log.Fatal(signInErr.Error())
 		}
 	}
+
 	session = sOutput.Session
+
 	return session, err
 }
