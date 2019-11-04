@@ -21,6 +21,7 @@ import (
 func unPad(cipherText []byte) ([]byte, error) {
 	c := cipherText[len(cipherText)-1]
 	n := int(c)
+
 	return cipherText[:len(cipherText)-n], nil
 }
 
