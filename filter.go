@@ -350,7 +350,6 @@ func applyNoteTitleFilter(f Filter, i Item, matchAny bool) (result, matchedAll, 
 					return
 				}
 				matchedAll = false
-
 			}
 		case "!=":
 			if i.Content.GetTitle() != f.Value {
@@ -376,7 +375,6 @@ func applyNoteTitleFilter(f Filter, i Item, matchAny bool) (result, matchedAll, 
 					return
 				}
 				matchedAll = true
-
 			} else {
 				if !matchAny {
 					result = false
@@ -436,7 +434,6 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 							return true
 						}
 						matchedAll = true
-
 					} else {
 						if !itemFilters.MatchAny {
 							return false
@@ -449,7 +446,6 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 							return true
 						}
 						matchedAll = true
-
 					} else {
 						if !itemFilters.MatchAny {
 							return false
