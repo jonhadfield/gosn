@@ -143,7 +143,7 @@ func applyNoteTagTitleFilter(f Filter, i Item, tags Items, matchAny bool) (resul
 					}
 					matchedAll = true
 				} else {
-					if ! matchAny {
+					if !matchAny {
 						result = false
 						done = true
 						return
@@ -166,7 +166,7 @@ func applyNoteTagTitleFilter(f Filter, i Item, tags Items, matchAny bool) (resul
 					}
 					matchedAll = true
 				} else {
-					if ! matchAny {
+					if !matchAny {
 						result = false
 						done = true
 						return

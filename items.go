@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/matryer/try.v1"
 	"math"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"gopkg.in/matryer/try.v1"
 )
 
 // Item describes a decrypted item
@@ -541,7 +542,7 @@ func makeSyncRequest(session Session, reqBody []byte) (responseBody []byte, err 
 		return
 	}
 	defer func() {
-		if err := response.Body.Close() ; err != nil {
+		if err := response.Body.Close(); err != nil {
 			fmt.Println("failed to close connection")
 		}
 	}()
