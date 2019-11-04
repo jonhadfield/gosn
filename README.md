@@ -6,10 +6,6 @@
 
 gosn is a library to help develop your own application to manage notes on the official, or your self-hosted, Standard Notes server.
 
-# status
-
-A work in progress with more tests to be written and bugs to be fixed. Please create a backup first.
-
 # installation
 
 Using go get: ``` go get github.com/jonhadfield/gosn```
