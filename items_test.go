@@ -385,7 +385,6 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	if !foundCreatedItem {
 		t.Errorf("failed to get created Item by UUID")
 	}
-
 }
 
 func TestNoteTagging(t *testing.T) {
@@ -449,7 +448,6 @@ func TestNoteTagging(t *testing.T) {
 			if stringInSlice(ref.UUID, foodNoteUUIDs, true) {
 				t.Error("found a food note reference")
 			}
-
 		}
 	}
 
@@ -654,9 +652,7 @@ func TestSearchNotesByText(t *testing.T) {
 		}
 	default:
 		t.Errorf("expected one note but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestSearchNotesByRegexTitleFilter(t *testing.T) {
@@ -675,14 +671,18 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 	}
 	// find one note by text
 	var foundItems Items
+
 	filterOne := Filter{
 		Type:       "Note",
 		Key:        "Title",
 		Comparison: "~",
 		Value:      "^Do.*",
 	}
+
 	var itemFilters ItemFilters
+
 	itemFilters.Filters = []Filter{filterOne}
+
 	foundItems, err = _getItems(sOutput.Session, itemFilters)
 	if err != nil {
 		t.Error(err.Error())
@@ -700,9 +700,7 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 		}
 	default:
 		t.Errorf("expected one note but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestSearchTagsByText(t *testing.T) {
@@ -739,9 +737,7 @@ func TestSearchTagsByText(t *testing.T) {
 		}
 	default:
 		t.Errorf("expected one tag but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestSearchTagsByRegex(t *testing.T) {
@@ -778,9 +774,7 @@ func TestSearchTagsByRegex(t *testing.T) {
 		}
 	default:
 		t.Errorf("expected one tag but got: %d", len(foundItems))
-
 	}
-
 }
 
 func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
