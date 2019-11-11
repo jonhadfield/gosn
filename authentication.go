@@ -57,7 +57,6 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 	if err != nil {
 		return
 	}
-
 	signInURLReq.Header.Set("Content-Type", "application/json")
 
 	var signInResp *http.Response
@@ -178,42 +177,17 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 
 func getAuthParams(input authParamsInput) (output authParamsOutput, err error) {
 	var authRequestOutput doAuthRequestOutput
-	if input.tokenName == "" {
-		authRequestOutput, err = doAuthParamsRequest(input)
-
-		output.Identifier = authRequestOutput.Identifier
-		output.PasswordCost = authRequestOutput.PasswordCost
-		output.PasswordNonce = authRequestOutput.PasswordNonce
-		output.Version = authRequestOutput.Version
-		output.PasswordSalt = authRequestOutput.PasswordSalt
-		output.TokenName = authRequestOutput.mfaKEY
-
-		if authRequestOutput.mfaKEY != "" {
-			err = fmt.Errorf("requestMFA")
-			return
-		}
-
-		if err != nil {
-			return
-		}
-	} else {
-		output, err = getAuthParamsWithMFA(input)
+	// if token name not provided, then make request without
+	authRequestOutput, err = doAuthParamsRequest(input)
+	if err != nil {
 		return
 	}
-
-	return
-}
-
-func getAuthParamsWithMFA(input authParamsInput) (output authParamsOutput, err error) {
-	var authRequestOutput doAuthRequestOutput
-	authRequestOutput, err = doAuthParamsRequest(input)
-
 	output.Identifier = authRequestOutput.Identifier
 	output.PasswordCost = authRequestOutput.PasswordCost
 	output.PasswordNonce = authRequestOutput.PasswordNonce
 	output.Version = authRequestOutput.Version
 	output.PasswordSalt = authRequestOutput.PasswordSalt
-	output.TokenName = input.tokenName
+	output.TokenName = authRequestOutput.mfaKEY
 
 	return
 }
@@ -272,7 +246,6 @@ type SignInOutput struct {
 // SignIn authenticates with the server using credentials and optional MFA
 // in order to obtain the data required to interact with Standard Notes
 func SignIn(input SignInInput) (output SignInOutput, err error) {
-	// if we have token name then we already have auth params
 	if input.APIServer == "" {
 		input.APIServer = apiServer
 	}
@@ -287,10 +260,13 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 
 	// request authentication parameters
 	var getAuthParamsOutput authParamsOutput
-
 	getAuthParamsOutput, err = getAuthParams(getAuthParamsInput)
-	output.TokenName = getAuthParamsOutput.TokenName
 	if err != nil {
+		return
+	}
+	// if we received a token name then we need to request token value
+	if getAuthParamsOutput.TokenName != "" {
+		output.TokenName = getAuthParamsOutput.TokenName
 		return
 	}
 
@@ -301,7 +277,7 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 
 	genEncPasswordInput.userPassword = input.Password
 	genEncPasswordInput.Identifier = input.Email
-	genEncPasswordInput.TokenName = getAuthParamsOutput.TokenName
+	genEncPasswordInput.TokenName = input.TokenName
 	genEncPasswordInput.PasswordCost = getAuthParamsOutput.PasswordCost
 	genEncPasswordInput.PasswordSalt = getAuthParamsOutput.PasswordSalt
 	genEncPasswordInput.PasswordNonce = getAuthParamsOutput.PasswordNonce
@@ -321,7 +297,7 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 	tokenResp, requestTokenFailure, err = requestToken(httpClient, signInInput{
 		email:       input.Email,
 		encPassword: encPassword,
-		tokenName:   getAuthParamsOutput.TokenName,
+		tokenName:   input.TokenName,
 		tokenValue:  input.TokenVal,
 		signInURL:   input.APIServer + signInPath,
 	})
@@ -464,12 +440,11 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 	sOutOne, sErrOne := SignIn(sInput)
 
 	// if error is returned and isn't a request for MFA then fail
-	if sErrOne != nil && sErrOne.Error() != "requestMFA" {
+	if sErrOne != nil {
 		return
 	}
-	
-	// if error is request for MFA then ask user for token
-	if sErrOne != nil && sErrOne.Error() == "requestMFA" {
+
+	if sOutOne.TokenName != "" {
 		// MFA token value required, so request
 		var tokenValue string
 
