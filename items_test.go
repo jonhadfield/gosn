@@ -257,6 +257,100 @@ func cleanup(session *Session) {
 	}
 }
 
+func TestItemsRemoveDeleted(t *testing.T) {
+	noteTitle := "Title"
+	noteText := "Title"
+	noteContent := NewNoteContent()
+	noteContent.Title = noteTitle
+	noteContent.Text = noteText
+
+	noteOne := NewNote()
+	noteOne.Content = noteContent
+	noteTwo := noteOne.Copy()
+	noteTwo.UUID += "a"
+	noteThree := noteOne.Copy()
+	noteThree.UUID += "b"
+	assert.False(t, noteOne.Deleted)
+	assert.False(t, noteTwo.Deleted)
+	assert.False(t, noteThree.Deleted)
+	noteTwo.Deleted = true
+	notes := Items{*noteOne, *noteTwo, *noteThree}
+	assert.Len(t, notes, 3)
+	notes.RemoveDeleted()
+	assert.Len(t, notes, 2)
+	for _, n := range notes {
+		assert.NotEqual(t, n.UUID, noteTwo.UUID)
+	}
+}
+
+func TestDecryptedItemsRemoveDeleted(t *testing.T) {
+	diOne := DecryptedItem{
+		UUID:        "1234",
+		Content:     "abcd",
+		ContentType: "Note",
+		Deleted:     false,
+	}
+	diTwo := DecryptedItem{
+		UUID:        "2345",
+		Content:     "abcd",
+		ContentType: "Note",
+		Deleted:     true,
+	}
+	diThree := DecryptedItem{
+		UUID:        "3456",
+		Content:     "abcd",
+		ContentType: "Note",
+		Deleted:     false,
+	}
+	dis := DecryptedItems{diOne, diTwo, diThree}
+	assert.Len(t, dis, 3)
+	dis.RemoveDeleted()
+	assert.Len(t, dis, 2)
+	for _, n := range dis {
+		assert.NotEqual(t, n.UUID, diTwo.UUID)
+	}
+}
+
+func TestEncryptedItemsRemoveDeleted(t *testing.T) {
+	noteTitle := "Title"
+	noteText := "Title"
+	noteContent := NewNoteContent()
+	noteContent.Title = noteTitle
+	noteContent.Text = noteText
+
+	noteOne := NewNote()
+	noteOne.Content = noteContent
+	noteTwo := noteOne.Copy()
+	noteTwo.UUID += "a"
+	noteThree := noteOne.Copy()
+	noteThree.UUID += "b"
+	assert.False(t, noteOne.Deleted)
+	assert.False(t, noteTwo.Deleted)
+	assert.False(t, noteThree.Deleted)
+	noteTwo.Deleted = true
+	notes := Items{*noteOne, *noteTwo, *noteThree}
+
+	var testInput generateEncryptedPasswordInput
+	testInput.userPassword = "oWB7c&77Zahw8XK$AUy#"
+	testInput.Identifier = "soba@lessknown.co.uk"
+	testInput.PasswordNonce = "9e88fc67fb8b1efe92deeb98b5b6a801c78bdfae08eecb315f843f6badf60aef"
+	testInput.PasswordCost = 110000
+	testInput.Version = "003"
+	testInput.PasswordSalt = ""
+	_, mk, ak, err := generateEncryptedPasswordAndKeys(testInput)
+	assert.NoError(t, err)
+
+	var eNotes EncryptedItems
+	eNotes, err = notes.Encrypt(mk, ak)
+	assert.NoError(t, err)
+	assert.Len(t, eNotes, 3)
+	eNotes.RemoveDeleted()
+	assert.Len(t, eNotes, 2)
+	for _, n := range eNotes {
+		assert.NotEqual(t, n.UUID, noteTwo.UUID)
+	}
+}
+
 func TestNoteContentCopy(t *testing.T) {
 	initialNoteTitle := "Title"
 	initialNoteText := "Title"

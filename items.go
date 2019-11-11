@@ -909,6 +909,18 @@ func (ei *EncryptedItems) DeDupe() {
 	*ei = deDuped
 }
 
+func (ei *EncryptedItems) RemoveDeleted() {
+	var clean EncryptedItems
+
+	for _, i := range *ei {
+		if ! i.Deleted {
+			clean = append(clean, i)
+		}
+	}
+
+	*ei = clean
+}
+
 func (i *Items) DeDupe() {
 	var encountered []string
 
@@ -923,6 +935,30 @@ func (i *Items) DeDupe() {
 	}
 
 	*i = deDuped
+}
+
+func (i *Items) RemoveDeleted() {
+	var clean Items
+
+	for _, j := range *i {
+		if ! j.Deleted {
+			clean = append(clean, j)
+		}
+	}
+
+	*i = clean
+}
+
+func (di *DecryptedItems) RemoveDeleted() {
+	var clean DecryptedItems
+
+	for _, j := range *di {
+		if ! j.Deleted {
+			clean = append(clean, j)
+		}
+	}
+
+	*di = clean
 }
 
 func (tagContent TagContent) Equals(e TagContent) bool {
