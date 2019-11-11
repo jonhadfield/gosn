@@ -66,7 +66,11 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 		return signInSuccess, signInFailure, err
 	}
 
-	defer signInResp.Body.Close()
+	defer func() {
+		if err := signInResp.Body.Close(); err != nil {
+			fmt.Println("failed to close response:", err)
+		}
+	}()
 
 	var signInRespBody []byte
 
@@ -154,7 +158,11 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 		return
 	}
 
-	defer response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			fmt.Println("failed to close response:", err)
+		}
+	}()
 
 	var requestOutput doAuthRequestOutput
 
@@ -396,7 +404,11 @@ func (input RegisterInput) Register() (token string, err error) {
 		return
 	}
 
-	defer response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			fmt.Println("failed to close response:", err)
+		}
+	}()
 
 	token, err = processDoRegisterRequestResponse(response)
 	if err != nil {
@@ -436,10 +448,8 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 		APIServer: apiServer,
 	}
 
-	// attempt sign-in
+	// attempt sign-in without MFA
 	sOutOne, sErrOne := SignIn(sInput)
-
-	// if error is returned and isn't a request for MFA then fail
 	if sErrOne != nil {
 		return
 	}
