@@ -85,16 +85,17 @@ func _createNotes(session Session, input map[string]string) (output PutItemsOutp
 		newNotes = append(newNotes, *newNote)
 	}
 
-	eNotes, _ := newNotes.Encrypt(session.Mk, session.Ak)
-	putItemsInput := PutItemsInput{
-		Session: session,
-		Items:   eNotes,
-	}
+	if len(newNotes) > 0 {
+		eNotes, _ := newNotes.Encrypt(session.Mk, session.Ak)
+		putItemsInput := PutItemsInput{
+			Session: session,
+			Items:   eNotes,
+		}
 
-	output, err = PutItems(putItemsInput)
-	if err != nil {
-		err = fmt.Errorf("PutItems Failed: %v", err)
-		return
+		output, err = PutItems(putItemsInput)
+		if err != nil {
+			err = fmt.Errorf("PutItems Failed: %v", err)
+		}
 	}
 
 	return
@@ -179,16 +180,17 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 		toDel = append(toDel, md)
 	}
 
-	eToDel, _ := toDel.Encrypt(session.Mk, session.Ak)
-	putItemsInput := PutItemsInput{
-		Session: *session,
-		Items:   eToDel,
-	}
+	if len(toDel) > 0 {
+		eToDel, _ := toDel.Encrypt(session.Mk, session.Ak)
+		putItemsInput := PutItemsInput{
+			Session: *session,
+			Items:   eToDel,
+		}
 
-	_, err = PutItems(putItemsInput)
-	if err != nil {
-		err = fmt.Errorf("PutItems Failed: %v", err)
-		return
+		_, err = PutItems(putItemsInput)
+		if err != nil {
+			return fmt.Errorf("PutItems Failed: %v", err)
+		}
 	}
 
 	return err
