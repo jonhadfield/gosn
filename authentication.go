@@ -453,6 +453,10 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 	if sErrOne != nil {
 		return
 	}
+	// return session if auth and master key returned
+	if sOutOne.Session.Ak != "" && sOutOne.Session.Mk != "" {
+		return sOutOne.Session, err
+	}
 
 	if sOutOne.TokenName != "" {
 		// MFA token value required, so request
