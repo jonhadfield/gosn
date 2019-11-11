@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	mathrand "math/rand"
 	"net/http"
 	"strconv"
@@ -290,11 +289,10 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 	var getAuthParamsOutput authParamsOutput
 
 	getAuthParamsOutput, err = getAuthParams(getAuthParamsInput)
+	output.TokenName = getAuthParamsOutput.TokenName
 	if err != nil {
 		return
 	}
-
-	output.TokenName = getAuthParamsOutput.TokenName
 
 	// generate encrypted password
 	var encPassword string
@@ -462,34 +460,35 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 		APIServer: apiServer,
 	}
 
-	sOutput, signInErr := SignIn(sInput)
-	if signInErr != nil {
-		if signInErr.Error() == "requestMFA" {
-			var tokenValue string
+	// attempt sign-in
+	sOutOne, sErrOne := SignIn(sInput)
 
-			fmt.Print("token: ")
-
-			_, err = fmt.Scanln(&tokenValue)
-			if err != nil {
-				return
-			}
-			// TODO: handle missing TokenName and Session
-			sInput.TokenName = sOutput.TokenName
-			sInput.TokenVal = strings.TrimSpace(tokenValue)
-			sOutput, signInErr = SignIn(sInput)
-
-			session = sOutput.Session
-
-			if signInErr != nil {
-				err = signInErr
-				return
-			}
-		} else {
-			log.Fatal(signInErr.Error())
-		}
+	// if error is returned and isn't a request for MFA then fail
+	if sErrOne != nil && sErrOne.Error() != "requestMFA" {
+		return
 	}
+	
+	// if error is request for MFA then ask user for token
+	if sErrOne != nil && sErrOne.Error() == "requestMFA" {
+		// MFA token value required, so request
+		var tokenValue string
 
-	session = sOutput.Session
+		fmt.Print("token: ")
+
+		_, err = fmt.Scanln(&tokenValue)
+		if err != nil {
+			return
+		}
+		// TODO: handle missing TokenName and Session
+		// add token name and value to sign-in input
+		sInput.TokenName = sOutOne.TokenName
+		sInput.TokenVal = strings.TrimSpace(tokenValue)
+		sOutTwo, sErrTwo := SignIn(sInput)
+		if sErrTwo != nil {
+			return session, sErrTwo
+		}
+		session = sOutTwo.Session
+	}
 
 	return session, err
 }
