@@ -107,7 +107,7 @@ func AddSession(snServer, inKey string, k keyring.Keyring) (res string, err erro
 	if inKey == "." {
 		var byteKey []byte
 		fmt.Print("session key: ")
-		byteKey, err = terminal.ReadPassword(syscall.Stdin)
+		byteKey, err = terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
 			return
 		}
