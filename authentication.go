@@ -7,6 +7,7 @@ import (
 	"io"
 	mathrand "math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -132,21 +133,21 @@ type errorResponse struct {
 // HTTP request bit
 func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err error) {
 	// make initial params request without mfa token
-	var url string
+	var reqURL string
 
 	var body io.Reader
 
 	if input.tokenName == "" {
 		// initial request
-		url = input.authParamsURL + "?email=" + input.email
+		reqURL = input.authParamsURL + "?email=" + input.email
 	} else {
 		// request with mfa
-		url = input.authParamsURL + "?email=" + input.email + "&" + input.tokenName + "=" + input.tokenValue
+		reqURL = input.authParamsURL + "?email=" + input.email + "&" + input.tokenName + "=" + input.tokenValue
 	}
 
 	var req *http.Request
 
-	req, err = http.NewRequest(http.MethodGet, url, body)
+	req, err = http.NewRequest(http.MethodGet, reqURL, body)
 	if err != nil {
 		return
 	}
@@ -251,6 +252,25 @@ type SignInOutput struct {
 	TokenName string
 }
 
+func processConnectionFailure(i error, reqURL string) error {
+	switch {
+	case strings.Contains(i.Error(), "no such host"):
+		urlBits, pErr := url.Parse(reqURL)
+		if pErr != nil {
+			break
+		}
+		return fmt.Errorf("failed to connect to %s as %s cannot be resolved", reqURL, urlBits.Hostname())
+	case strings.Contains(i.Error(), "unsupported protocol scheme"):
+		if len(reqURL) > 0 {
+			return fmt.Errorf("protocol is missing from API server URL: %s", reqURL)
+		}
+		return fmt.Errorf("API Server URL is undefined")
+	case strings.Contains(i.Error(), "i/o timeout"):
+		return fmt.Errorf("failed to connect to %s within %d seconds", reqURL, connectionTimeout)
+	}
+	return i
+}
+
 // SignIn authenticates with the server using credentials and optional MFA
 // in order to obtain the data required to interact with Standard Notes
 func SignIn(input SignInInput) (output SignInOutput, err error) {
@@ -270,6 +290,7 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 	var getAuthParamsOutput authParamsOutput
 	getAuthParamsOutput, err = getAuthParams(getAuthParamsInput)
 	if err != nil {
+		err = processConnectionFailure(err, getAuthParamsInput.authParamsURL)
 		return
 	}
 	// if we received a token name then we need to request token value

@@ -101,3 +101,40 @@ func TestSignInWithBadPassword(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid email or password")
 }
+
+func TestSignInWithUnresolvableHost(t *testing.T) {
+	password := "invalid"
+	sInput := SignInInput{
+		Email:     "sn@lessknown.co.uk",
+		Password:  password,
+		APIServer: "https://standardnotes.example.com:443",
+	}
+	_, err := SignIn(sInput)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "standardnotes.example.com cannot be resolved")
+}
+
+func TestSignInWithInvalidURL(t *testing.T) {
+	password := "invalid"
+	sInput := SignInInput{
+		Email:     "sn@lessknown.co.uk",
+		Password:  password,
+		APIServer: "standardnotes.example.com:443",
+	}
+	_, err := SignIn(sInput)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "protocol is missing from API server URL: standardnotes.example.com")
+}
+
+func TestSignInWithUnavailableServer(t *testing.T) {
+	password := "invalid"
+	sInput := SignInInput{
+		Email:     "sn@lessknown.co.uk",
+		Password:  password,
+		APIServer: "https://10.10.10.10:6000",
+	}
+	_, err := SignIn(sInput)
+	assert.Error(t, err)
+	assert.Equal(t, err.Error(), fmt.Sprintf("failed to connect to %s within %d seconds",
+		"https://10.10.10.10:6000/auth/params", connectionTimeout))
+}

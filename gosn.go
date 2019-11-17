@@ -1,6 +1,7 @@
 package gosn
 
 import (
+	"net"
 	"net/http"
 	"time"
 )
@@ -27,6 +28,8 @@ const (
 	// HTTP
 	maxIdleConnections = 100 // HTTP transport limit
 	requestTimeout     = 60  // HTTP transport limit
+	connectionTimeout  = 5   // HTTP transport dialer limit
+	keepAliveTimeout   = 10  // HTTP transport dialer limit
 )
 
 var (
@@ -43,7 +46,12 @@ func createHTTPClient() *http.Client {
 		Transport: &http.Transport{
 			MaxIdleConnsPerHost: maxIdleConnections,
 			DisableKeepAlives:   false,
+			DialContext: (&net.Dialer{
+				Timeout:   connectionTimeout * time.Second,
+				KeepAlive: keepAliveTimeout * time.Second,
+			}).DialContext,
 		},
+
 		Timeout: time.Duration(requestTimeout) * time.Second,
 	}
 
