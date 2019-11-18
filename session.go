@@ -203,7 +203,7 @@ func GetSessionFromUser(server string) (Session, string, error) {
 	if err != nil {
 		return sess, email, err
 	}
-	
+
 	return sess, email, err
 }
 
