@@ -267,6 +267,8 @@ func processConnectionFailure(i error, reqURL string) error {
 		return fmt.Errorf("API Server URL is undefined")
 	case strings.Contains(i.Error(), "i/o timeout"):
 		return fmt.Errorf("failed to connect to %s within %d seconds", reqURL, connectionTimeout)
+	case strings.Contains(i.Error(), "permission denied"):
+		return fmt.Errorf("failed to connect to %s", reqURL)
 	}
 	return i
 }
@@ -470,16 +472,17 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 	}
 
 	// attempt sign-in without MFA
-	sOutOne, sErrOne := SignIn(sInput)
-	if sErrOne != nil {
+	var sioNoMFA SignInOutput
+	sioNoMFA, err = SignIn(sInput)
+	if err != nil {
 		return
 	}
 	// return session if auth and master key returned
-	if sOutOne.Session.Ak != "" && sOutOne.Session.Mk != "" {
-		return sOutOne.Session, err
+	if sioNoMFA.Session.Ak != "" && sioNoMFA.Session.Mk != "" {
+		return sioNoMFA.Session, err
 	}
 
-	if sOutOne.TokenName != "" {
+	if sioNoMFA.TokenName != "" {
 		// MFA token value required, so request
 		var tokenValue string
 
@@ -491,7 +494,7 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 		}
 		// TODO: handle missing TokenName and Session
 		// add token name and value to sign-in input
-		sInput.TokenName = sOutOne.TokenName
+		sInput.TokenName = sioNoMFA.TokenName
 		sInput.TokenVal = strings.TrimSpace(tokenValue)
 		sOutTwo, sErrTwo := SignIn(sInput)
 		if sErrTwo != nil {

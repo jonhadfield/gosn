@@ -202,8 +202,8 @@ func GetSessionFromUser(server string) (Session, string, error) {
 	sess, err = CliSignIn(email, password, apiServer)
 	if err != nil {
 		return sess, email, err
-
 	}
+	
 	return sess, email, err
 }
 
