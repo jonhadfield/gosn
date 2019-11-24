@@ -3,9 +3,11 @@ package gosn
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -36,7 +38,9 @@ func stringInSlice(inStr string, inSlice []string, matchCase bool) bool {
 	return false
 }
 
-func getResponseBody(resp *http.Response) (body []byte, err error) {
+func getResponseBody(resp *http.Response, debug bool) (body []byte, err error) {
+	start := time.Now()
+
 	var output io.ReadCloser
 
 	switch resp.Header.Get("Content-Encoding") {
@@ -57,6 +61,8 @@ func getResponseBody(resp *http.Response) (body []byte, err error) {
 	}
 
 	body = buf.Bytes()
+	elapsed := time.Since(start)
+	debugPrint(debug, fmt.Sprintf("getResponseBody | process time: %+v", elapsed))
 
 	return
 }

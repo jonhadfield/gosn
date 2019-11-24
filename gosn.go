@@ -1,6 +1,7 @@
 package gosn
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -58,8 +59,8 @@ func createHTTPClient() *http.Client {
 	return client
 }
 
-func debug(funcName string, msg interface{}) {
-	if debugLog != nil {
-		debugLog(libName, funcName, msg)
+func debugPrint(show bool, msg string) {
+	if show {
+		log.Println(libName, "|", msg)
 	}
 }

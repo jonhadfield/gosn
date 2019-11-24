@@ -28,6 +28,7 @@ type authParamsInput struct {
 	tokenName     string
 	tokenValue    string
 	authParamsURL string
+	debug         bool
 }
 
 type authParamsOutput struct {
@@ -58,11 +59,18 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 	if err != nil {
 		return
 	}
+
 	signInURLReq.Header.Set("Content-Type", "application/json")
+	signInURLReq.Header.Set("Accept-Encoding", "gzip")
 
 	var signInResp *http.Response
 
+	start := time.Now()
 	signInResp, err = client.Do(signInURLReq)
+	elapsed := time.Since(start)
+
+	debugPrint(input.debug, fmt.Sprintf("requestToken | request took: %+v", elapsed))
+
 	if err != nil {
 		return signInSuccess, signInFailure, err
 	}
@@ -75,7 +83,7 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 
 	var signInRespBody []byte
 
-	signInRespBody, err = getResponseBody(signInResp)
+	signInRespBody, err = getResponseBody(signInResp, input.debug)
 	if err != nil {
 		return
 	}
@@ -93,9 +101,9 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 	return signInSuccess, signInFailure, err
 }
 
-func processDoAuthRequestResponse(response *http.Response) (output doAuthRequestOutput, errResp errorResponse, err error) {
+func processDoAuthRequestResponse(response *http.Response, debug bool) (output doAuthRequestOutput, errResp errorResponse, err error) {
 	var body []byte
-	body, err = getResponseBody(response)
+	body, err = getResponseBody(response, debug)
 
 	switch response.StatusCode {
 	case 200:
@@ -152,6 +160,8 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 		return
 	}
 
+	req.Header.Set("Accept-Encoding", "gzip")
+
 	var response *http.Response
 
 	response, err = httpClient.Do(req)
@@ -169,7 +179,7 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 
 	var errResp errorResponse
 
-	requestOutput, errResp, err = processDoAuthRequestResponse(response)
+	requestOutput, errResp, err = processDoAuthRequestResponse(response, input.debug)
 	if err != nil {
 		return
 	}
@@ -191,6 +201,7 @@ func getAuthParams(input authParamsInput) (output authParamsOutput, err error) {
 	if err != nil {
 		return
 	}
+
 	output.Identifier = authRequestOutput.Identifier
 	output.PasswordCost = authRequestOutput.PasswordCost
 	output.PasswordNonce = authRequestOutput.PasswordNonce
@@ -212,6 +223,7 @@ type signInInput struct {
 	tokenName   string
 	tokenValue  string
 	signInURL   string
+	debug       bool
 }
 
 type signInResponse struct {
@@ -245,6 +257,7 @@ type SignInInput struct {
 	TokenVal  string
 	Password  string
 	APIServer string
+	Debug     bool
 }
 
 type SignInOutput struct {
@@ -259,17 +272,20 @@ func processConnectionFailure(i error, reqURL string) error {
 		if pErr != nil {
 			break
 		}
+
 		return fmt.Errorf("failed to connect to %s as %s cannot be resolved", reqURL, urlBits.Hostname())
 	case strings.Contains(i.Error(), "unsupported protocol scheme"):
 		if len(reqURL) > 0 {
 			return fmt.Errorf("protocol is missing from API server URL: %s", reqURL)
 		}
+
 		return fmt.Errorf("API Server URL is undefined")
 	case strings.Contains(i.Error(), "i/o timeout"):
 		return fmt.Errorf("failed to connect to %s within %d seconds", reqURL, connectionTimeout)
 	case strings.Contains(i.Error(), "permission denied"):
 		return fmt.Errorf("failed to connect to %s", reqURL)
 	}
+
 	return i
 }
 
@@ -290,6 +306,7 @@ func SignIn(input SignInInput) (output SignInOutput, err error) {
 
 	// request authentication parameters
 	var getAuthParamsOutput authParamsOutput
+
 	getAuthParamsOutput, err = getAuthParams(getAuthParamsInput)
 	if err != nil {
 		err = processConnectionFailure(err, getAuthParamsInput.authParamsURL)
@@ -354,12 +371,13 @@ type RegisterInput struct {
 	Email     string
 	Password  string
 	APIServer string
+	Debug     bool
 }
 
-func processDoRegisterRequestResponse(response *http.Response) (token string, err error) {
+func processDoRegisterRequestResponse(response *http.Response, debug bool) (token string, err error) {
 	var body []byte
 
-	body, err = getResponseBody(response)
+	body, err = getResponseBody(response, debug)
 	if err != nil {
 		return
 	}
@@ -418,6 +436,8 @@ func (input RegisterInput) Register() (token string, err error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip")
+
 	req.Host = input.APIServer
 
 	var response *http.Response
@@ -433,7 +453,7 @@ func (input RegisterInput) Register() (token string, err error) {
 		}
 	}()
 
-	token, err = processDoRegisterRequestResponse(response)
+	token, err = processDoRegisterRequestResponse(response, input.Debug)
 	if err != nil {
 		return
 	}
@@ -473,6 +493,7 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 
 	// attempt sign-in without MFA
 	var sioNoMFA SignInOutput
+
 	sioNoMFA, err = SignIn(sInput)
 	if err != nil {
 		return
@@ -496,10 +517,12 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 		// add token name and value to sign-in input
 		sInput.TokenName = sioNoMFA.TokenName
 		sInput.TokenVal = strings.TrimSpace(tokenValue)
+
 		sOutTwo, sErrTwo := SignIn(sInput)
 		if sErrTwo != nil {
 			return session, sErrTwo
 		}
+
 		session = sOutTwo.Session
 	}
 

@@ -86,7 +86,7 @@ func _createNotes(session Session, input map[string]string) (output PutItemsOutp
 	}
 
 	if len(newNotes) > 0 {
-		eNotes, _ := newNotes.Encrypt(session.Mk, session.Ak)
+		eNotes, _ := newNotes.Encrypt(session.Mk, session.Ak, true)
 		putItemsInput := PutItemsInput{
 			Session: session,
 			Items:   eNotes,
@@ -111,7 +111,7 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 		newTag.Content = newTagContent
 
 		dItems := Items{*newTag}
-		eItems, _ := dItems.Encrypt(session.Mk, session.Ak)
+		eItems, _ := dItems.Encrypt(session.Mk, session.Ak, true)
 		putItemsInput := PutItemsInput{
 			Session: session,
 			Items:   eItems,
@@ -151,7 +151,7 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 
 	var di DecryptedItems
 
-	di, err = gio.Items.Decrypt(session.Mk, session.Ak)
+	di, err = gio.Items.Decrypt(session.Mk, session.Ak, true)
 	if err != nil {
 		return
 	}
@@ -181,7 +181,7 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 	}
 
 	if len(toDel) > 0 {
-		eToDel, _ := toDel.Encrypt(session.Mk, session.Ak)
+		eToDel, _ := toDel.Encrypt(session.Mk, session.Ak, true)
 		putItemsInput := PutItemsInput{
 			Session: *session,
 			Items:   eToDel,
@@ -211,7 +211,7 @@ func _getItems(session Session, itemFilters ItemFilters) (items Items, err error
 
 	var di DecryptedItems
 
-	di, err = gio.Items.Decrypt(session.Mk, session.Ak)
+	di, err = gio.Items.Decrypt(session.Mk, session.Ak, true)
 	if err != nil {
 		return
 	}
@@ -272,14 +272,19 @@ func TestItemsRemoveDeleted(t *testing.T) {
 	noteTwo.UUID += "a"
 	noteThree := noteOne.Copy()
 	noteThree.UUID += "b"
+
 	assert.False(t, noteOne.Deleted)
+
 	assert.False(t, noteTwo.Deleted)
+
 	assert.False(t, noteThree.Deleted)
+
 	noteTwo.Deleted = true
 	notes := Items{*noteOne, *noteTwo, *noteThree}
 	assert.Len(t, notes, 3)
 	notes.RemoveDeleted()
 	assert.Len(t, notes, 2)
+
 	for _, n := range notes {
 		assert.NotEqual(t, n.UUID, noteTwo.UUID)
 	}
@@ -308,6 +313,7 @@ func TestDecryptedItemsRemoveDeleted(t *testing.T) {
 	assert.Len(t, dis, 3)
 	dis.RemoveDeleted()
 	assert.Len(t, dis, 2)
+
 	for _, n := range dis {
 		assert.NotEqual(t, n.UUID, diTwo.UUID)
 	}
@@ -326,9 +332,11 @@ func TestEncryptedItemsRemoveDeleted(t *testing.T) {
 	noteTwo.UUID += "a"
 	noteThree := noteOne.Copy()
 	noteThree.UUID += "b"
+
 	assert.False(t, noteOne.Deleted)
 	assert.False(t, noteTwo.Deleted)
 	assert.False(t, noteThree.Deleted)
+
 	noteTwo.Deleted = true
 	notes := Items{*noteOne, *noteTwo, *noteThree}
 
@@ -343,11 +351,12 @@ func TestEncryptedItemsRemoveDeleted(t *testing.T) {
 	assert.NoError(t, err)
 
 	var eNotes EncryptedItems
-	eNotes, err = notes.Encrypt(mk, ak)
+	eNotes, err = notes.Encrypt(mk, ak, true)
 	assert.NoError(t, err)
 	assert.Len(t, eNotes, 3)
 	eNotes.RemoveDeleted()
 	assert.Len(t, eNotes, 2)
+
 	for _, n := range eNotes {
 		assert.NotEqual(t, n.UUID, noteTwo.UUID)
 	}
@@ -455,7 +464,7 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 	newNote.Content = &newNoteContent
 	dItems := Items{*newNote}
 	assert.NoError(t, dItems.Validate())
-	eItems, _ := dItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	eItems, _ := dItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	putItemsInput := PutItemsInput{
 		Items:   eItems,
 		Session: sOutput.Session,
@@ -480,7 +489,7 @@ func TestPutItemsAddSingleNote(t *testing.T) {
 
 	var di DecryptedItems
 
-	di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	if err != nil {
 		return
 	}
@@ -526,7 +535,7 @@ func TestNoteTagging(t *testing.T) {
 	// create base notes
 	newNotes := genNotes(100, 2)
 	assert.NoError(t, newNotes.Validate())
-	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 
 	pii := PutItemsInput{
 		Session: sOutput.Session,
@@ -602,7 +611,7 @@ func TestNoteTagging(t *testing.T) {
 	allItems = append(allItems, updatedAnimalTagsOutput.Items...)
 	allItems = append(allItems, updatedFoodTagsOutput.Items...)
 	assert.NoError(t, allItems.Validate())
-	eItems, _ = allItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	eItems, _ = allItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	pii = PutItemsInput{
 		Items:   eItems,
 		Session: sOutput.Session,
@@ -636,7 +645,7 @@ func TestNoteTagging(t *testing.T) {
 
 	var animalNotes Items
 
-	animalNotes, err = getAnimalNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+	animalNotes, err = getAnimalNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	if err != nil {
 		return
 	}
@@ -680,7 +689,7 @@ func TestNoteTagging(t *testing.T) {
 	assert.NoError(t, err, "failed to retrieve notes using regex")
 
 	var notes Items
-	notes, err = getNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak)
+	notes, err = getNotesOutput.Items.DecryptAndParse(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	assert.NoError(t, err)
 
 	notes.Filter(regexFilters)
@@ -719,7 +728,7 @@ func TestSearchNotesByUUID(t *testing.T) {
 
 	var di DecryptedItems
 
-	di, err = cnO.ResponseBody.SavedItems.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	di, err = cnO.ResponseBody.SavedItems.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	assert.NoError(t, err)
 
 	var dis Items
@@ -956,10 +965,11 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 	newNotes := genNotes(200, 2)
 	assert.NoError(t, newNotes.Validate())
 
-	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
 		Items:   eItems,
+		Debug:   true,
 	}
 
 	_, err = PutItems(pii)
@@ -976,6 +986,7 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 			Session:     sOutput.Session,
 			CursorToken: cursorToken,
 			BatchSize:   50,
+			Debug:       true,
 		}
 
 		var gio GetItemsOutput
@@ -984,7 +995,7 @@ func TestCreateAndGet200NotesInBatchesOf50(t *testing.T) {
 		assert.NoError(t, err)
 
 		var di DecryptedItems
-		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 		assert.NoError(t, err)
 
 		var items Items
@@ -1027,7 +1038,7 @@ func TestCreateAndGet301Notes(t *testing.T) {
 
 	newNotes := genNotes(numNotes, 10)
 	assert.NoError(t, newNotes.Validate())
-	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+	eItems, _ := newNotes.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 	pii := PutItemsInput{
 		Session: sOutput.Session,
 		Items:   eItems,
@@ -1066,7 +1077,7 @@ func TestCreateAndGet301Notes(t *testing.T) {
 
 		var di DecryptedItems
 
-		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak)
+		di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
 		if err != nil {
 			t.Error(err)
 		}

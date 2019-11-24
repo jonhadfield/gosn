@@ -120,6 +120,7 @@ type GetItemsInput struct {
 	OutType     string
 	BatchSize   int // number of items to retrieve
 	PageSize    int // override default number of items to request with each sync call
+	Debug       bool
 }
 
 // GetItemsOutput defines the output from retrieving items
@@ -148,9 +149,8 @@ func resizeForRetry(in *GetItemsInput) {
 
 type EncryptedItems []EncryptedItem
 
-func (ei EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
-	funcName := funcNameOutputStart + "Decrypt" + funcNameOutputEnd
-	debug(funcName, fmt.Errorf("items: %d", len(ei)))
+func (ei EncryptedItems) Decrypt(Mk, Ak string, debug bool) (o DecryptedItems, err error) {
+	debugPrint(debug, fmt.Sprintf("Decrypt | encrypted %d items", len(ei)))
 
 	for _, eItem := range ei {
 		var item DecryptedItem
@@ -188,13 +188,12 @@ func (ei EncryptedItems) Decrypt(Mk, Ak string) (o DecryptedItems, err error) {
 	return o, err
 }
 
-func (ei EncryptedItems) DecryptAndParse(Mk, Ak string) (o Items, err error) {
-	funcName := funcNameOutputStart + "DecryptAndParse" + funcNameOutputEnd
-	debug(funcName, fmt.Errorf("items: %d", len(ei)))
+func (ei EncryptedItems) DecryptAndParse(Mk, Ak string, debug bool) (o Items, err error) {
+	debugPrint(debug, fmt.Sprintf("DecryptAndParse | items: %d", len(ei)))
 
 	var di DecryptedItems
 
-	di, err = ei.Decrypt(Mk, Ak)
+	di, err = ei.Decrypt(Mk, Ak, debug)
 	if err != nil {
 		return
 	}
@@ -206,27 +205,35 @@ func (ei EncryptedItems) DecryptAndParse(Mk, Ak string) (o Items, err error) {
 
 // GetItems retrieves items from the API using optional filters
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
-	funcName := funcNameOutputStart + "GetItems" + funcNameOutputEnd
-
 	var sResp syncResponse
 
+	debugPrint(input.Debug, fmt.Sprintf("GetItems | PageSize %d", input.PageSize))
 	// retry logic is to handle responses that are too large
 	// so we can reduce number we retrieve with each sync request
+	start := time.Now()
 	rErr := try.Do(func(attempt int) (bool, error) {
+		debugPrint(input.Debug, fmt.Sprintf("GetItems | attempt %d", attempt))
 		var rErr error
 		sResp, rErr = getItemsViaAPI(input)
 		if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
+			debugPrint(input.Debug, fmt.Sprintf("GetItems | %s", rErr.Error()))
 			initialSize := input.PageSize
 			resizeForRetry(&input)
-			debug(funcName, fmt.Sprintf("failed to retrieve %d items "+
+			debugPrint(input.Debug, fmt.Sprintf("GetItems | failed to retrieve %d items "+
 				"at a time so reducing to %d", initialSize, input.PageSize))
 		}
 		return attempt < 3, rErr
 	})
+
 	if rErr != nil {
 		return output, rErr
 	}
 
+	elapsed := time.Since(start)
+
+	debugPrint(input.Debug, fmt.Sprintf("GetItems | took %v to get all items", elapsed))
+
+	postStart := time.Now()
 	output.Items = sResp.Items
 	output.Items.DeDupe()
 	output.Unsaved = sResp.Unsaved
@@ -236,7 +243,9 @@ func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
 	output.Cursor = sResp.CursorToken
 	output.SyncToken = sResp.SyncToken
 	// strip any duplicates (https://github.com/standardfile/rails-engine/issues/5)
-	debug(funcName, fmt.Errorf("sync token: %+v", stripLineBreak(output.SyncToken)))
+	postElapsed := time.Since(postStart)
+	debugPrint(input.Debug, fmt.Sprintf("GetItems | post processing took %v", postElapsed))
+	debugPrint(input.Debug, fmt.Sprintf("GetItems | sync token: %+v", stripLineBreak(output.SyncToken)))
 
 	return output, err
 }
@@ -246,6 +255,7 @@ type PutItemsInput struct {
 	Items     EncryptedItems
 	SyncToken string
 	Session   Session
+	Debug     bool
 }
 
 // PutItemsOutput defines the output from putting items
@@ -289,15 +299,14 @@ func (i *Items) Validate() error {
 	return err
 }
 
-func (i *Items) Encrypt(Mk, Ak string) (e EncryptedItems, err error) {
-	e, err = encryptItems(i, Mk, Ak)
+func (i *Items) Encrypt(Mk, Ak string, debug bool) (e EncryptedItems, err error) {
+	e, err = encryptItems(i, Mk, Ak, debug)
 	return
 }
 
 // PutItems validates and then syncs items via API
 func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
-	funcName := funcNameOutputStart + "PutItems" + funcNameOutputEnd
-	debug(funcName, fmt.Sprintf("putting %d items", len(i.Items)))
+	debugPrint(i.Debug, fmt.Sprintf("PutItems | putting %d items", len(i.Items)))
 
 	// for each page size, send to push and get response
 	syncToken := stripLineBreak(i.SyncToken)
@@ -317,7 +326,7 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 			lastItemInChunkIndex = x + PageSize
 		}
 
-		debug(funcName, fmt.Sprintf("putting items: %d to %d", x+1, lastItemInChunkIndex+1))
+		debugPrint(i.Debug, fmt.Sprintf("PutItems | putting items: %d to %d", x+1, lastItemInChunkIndex+1))
 
 		bigChunkSize := (lastItemInChunkIndex - x) + 1
 
@@ -340,7 +349,7 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 				itemsToPut := i.Items[subChunkStart : subChunkEnd+1]
 				encItemJSON, _ = json.Marshal(itemsToPut)
 				var s []EncryptedItem
-				s, syncToken, rErr = putChunk(i.Session, encItemJSON)
+				s, syncToken, rErr = putChunk(i.Session, encItemJSON, i.Debug)
 				if rErr != nil && strings.Contains(strings.ToLower(rErr.Error()), "too large") {
 					subChunkEnd = resizePutForRetry(subChunkStart, subChunkEnd, len(encItemJSON))
 				}
@@ -348,7 +357,7 @@ func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
 					savedItems = append(savedItems, s...)
 					totalPut += len(itemsToPut)
 				}
-				debug(funcName, fmt.Sprintf("attempt: %d of %d", attempt, maxAttempts))
+				debugPrint(i.Debug, fmt.Sprintf("PutItems | attempt: %d of %d", attempt, maxAttempts))
 				return attempt < maxAttempts, rErr
 			})
 			if rErr != nil {
@@ -406,13 +415,13 @@ func resizePutForRetry(start, end, numBytes int) int {
 	return end
 }
 
-func putChunk(session Session, encItemJSON []byte) (savedItems []EncryptedItem, syncToken string, err error) {
+func putChunk(session Session, encItemJSON []byte, debug bool) (savedItems []EncryptedItem, syncToken string, err error) {
 	reqBody := []byte(`{"items":` + string(encItemJSON) +
 		`,"sync_token":"` + stripLineBreak(syncToken) + `"}`)
 
 	var syncRespBodyBytes []byte
 
-	syncRespBodyBytes, err = makeSyncRequest(session, reqBody)
+	syncRespBodyBytes, err = makeSyncRequest(session, reqBody, debug)
 	if err != nil {
 		return
 	}
@@ -567,9 +576,7 @@ func (noteContent *NoteContent) UpsertReferences(newRefs ItemReferences) {
 	}
 }
 
-func makeSyncRequest(session Session, reqBody []byte) (responseBody []byte, err error) {
-	funcName := funcNameOutputStart + "makeSyncRequest" + funcNameOutputEnd
-
+func makeSyncRequest(session Session, reqBody []byte, debug bool) (responseBody []byte, err error) {
 	var request *http.Request
 
 	request, err = http.NewRequest(http.MethodPost, session.Server+syncPath, bytes.NewBuffer(reqBody))
@@ -579,10 +586,16 @@ func makeSyncRequest(session Session, reqBody []byte) (responseBody []byte, err 
 
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer "+session.Token)
+	request.Header.Set("Accept-Encoding", "gzip")
 
 	var response *http.Response
 
+	start := time.Now()
 	response, err = httpClient.Do(request)
+	elapsed := time.Since(start)
+
+	debugPrint(debug, fmt.Sprintf("makeSyncRequest | request took: %v", elapsed))
+
 	if err != nil {
 		return
 	}
@@ -600,51 +613,50 @@ func makeSyncRequest(session Session, reqBody []byte) (responseBody []byte, err 
 	}
 
 	if response.StatusCode > 400 {
-		debug(funcName, fmt.Errorf("sync of %d req bytes failed with: %s", len(reqBody), response.Status))
+		debugPrint(debug, fmt.Sprintf("makeSyncRequest | sync of %d req bytes failed with: %s", len(reqBody), response.Status))
 		return
 	}
 
 	if response.StatusCode >= 200 && response.StatusCode < 300 {
-		debug(funcName, fmt.Errorf("sync of %d req bytes succeeded with: %s", len(reqBody), response.Status))
+		debugPrint(debug, fmt.Sprintf("makeSyncRequest | sync of %d req bytes succeeded with: %s", len(reqBody), response.Status))
 	}
 
-	responseBody, err = getResponseBody(response)
+	responseBody, err = getResponseBody(response, debug)
 	if err != nil {
 		return
 	}
+
+	debugPrint(debug, fmt.Sprintf("makeSyncRequest | response size %d bytes", len(responseBody)))
 
 	return responseBody, err
 }
 
 func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
-	funcName := funcNameOutputStart + "getItemsViaAPI" + funcNameOutputEnd
 	// determine how many items to retrieve with each call
 	var limit int
 
 	switch {
 	case input.BatchSize > 0:
-		debug(funcName, fmt.Sprintf("input.BatchSize: %d", input.BatchSize))
+		debugPrint(input.Debug, fmt.Sprintf("getItemsViaAPI |input.BatchSize: %d", input.BatchSize))
 		// batch size must be lower than or equal to page size
 		limit = input.BatchSize
 	case input.PageSize > 0:
-		debug(funcName, fmt.Sprintf("input.PageSize: %d", input.PageSize))
+		debugPrint(input.Debug, fmt.Sprintf("getItemsViaAPI | input.PageSize: %d", input.PageSize))
 		limit = input.PageSize
 	default:
-		debug(funcName, fmt.Sprintf("default - limit: %d", PageSize))
+		debugPrint(input.Debug, fmt.Sprintf("getItemsViaAPI | default - limit: %d", PageSize))
 		limit = PageSize
 	}
 
-	debug(funcName, fmt.Sprintf("using limit: %d", limit))
+	debugPrint(input.Debug, fmt.Sprintf("getItemsViaAPI | using limit: %d", limit))
 
 	var requestBody []byte
 	// generate request body
 	switch {
 	case input.CursorToken == "":
-		debug(funcName, "cursor is empty")
-
 		requestBody = []byte(`{"limit":` + strconv.Itoa(limit) + `}`)
 	case input.CursorToken == "null":
-		debug(funcName, "\ncursor is null")
+		debugPrint(input.Debug, "getItemsViaAPI | cursor is null")
 
 		requestBody = []byte(`{"limit":` + strconv.Itoa(limit) +
 			`,"items":[],"sync_token":"` + input.SyncToken + `\n","cursor_token":null}`)
@@ -657,9 +669,13 @@ func getItemsViaAPI(input GetItemsInput) (out syncResponse, err error) {
 	}
 
 	// make the request
-	debug(funcName, fmt.Sprintf("making request: %s", stripLineBreak(string(requestBody))))
+	debugPrint(input.Debug, fmt.Sprintf("getItemsViaAPI | making request: %s", stripLineBreak(string(requestBody))))
 
-	responseBody, err := makeSyncRequest(input.Session, requestBody)
+	msrStart := time.Now()
+	responseBody, err := makeSyncRequest(input.Session, requestBody, input.Debug)
+	msrEnd := time.Since(msrStart)
+	debugPrint(input.Debug, fmt.Sprintf("getItemsViaAPI | makeSyncRequest took: %v", msrEnd))
+
 	if err != nil {
 		return
 	}
