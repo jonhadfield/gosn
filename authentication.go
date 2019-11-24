@@ -62,6 +62,8 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 
 	signInURLReq.Header.Set("Content-Type", "application/json")
 	signInURLReq.Header.Set("Accept-Encoding", "gzip")
+	signInURLReq.Header.Set("Connection", "keep-alive")
+
 
 	var signInResp *http.Response
 
@@ -161,6 +163,8 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 	}
 
 	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("Connection", "keep-alive")
+
 
 	var response *http.Response
 
@@ -437,6 +441,7 @@ func (input RegisterInput) Register() (token string, err error) {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("Connection", "keep-alive")
 
 	req.Host = input.APIServer
 

@@ -587,6 +587,7 @@ func makeSyncRequest(session Session, reqBody []byte, debug bool) (responseBody 
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer "+session.Token)
 	request.Header.Set("Accept-Encoding", "gzip")
+	request.Header.Set("Connection", "keep-alive")
 
 	var response *http.Response
 
