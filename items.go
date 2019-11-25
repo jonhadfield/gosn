@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/matryer/try.v1"
+	try "gopkg.in/matryer/try.v1"
 )
 
 // Item describes a decrypted item
@@ -205,6 +205,11 @@ func (ei EncryptedItems) DecryptAndParse(Mk, Ak string, debug bool) (o Items, er
 
 // GetItems retrieves items from the API using optional filters
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
+	if !input.Session.Valid() {
+		err = fmt.Errorf("session is invalid")
+		return
+	}
+
 	var sResp syncResponse
 
 	debugPrint(input.Debug, fmt.Sprintf("GetItems | PageSize %d", input.PageSize))
@@ -306,6 +311,11 @@ func (i *Items) Encrypt(Mk, Ak string, debug bool) (e EncryptedItems, err error)
 
 // PutItems validates and then syncs items via API
 func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
+	if !i.Session.Valid() {
+		err = fmt.Errorf("session is invalid")
+		return
+	}
+
 	debugPrint(i.Debug, fmt.Sprintf("PutItems | putting %d items", len(i.Items)))
 
 	// for each page size, send to push and get response
@@ -930,7 +940,7 @@ func (ei *EncryptedItems) RemoveDeleted() {
 	var clean EncryptedItems
 
 	for _, i := range *ei {
-		if ! i.Deleted {
+		if !i.Deleted {
 			clean = append(clean, i)
 		}
 	}
@@ -958,7 +968,7 @@ func (i *Items) RemoveDeleted() {
 	var clean Items
 
 	for _, j := range *i {
-		if ! j.Deleted {
+		if !j.Deleted {
 			clean = append(clean, j)
 		}
 	}
@@ -970,7 +980,7 @@ func (di *DecryptedItems) RemoveDeleted() {
 	var clean DecryptedItems
 
 	for _, j := range *di {
-		if ! j.Deleted {
+		if !j.Deleted {
 			clean = append(clean, j)
 		}
 	}

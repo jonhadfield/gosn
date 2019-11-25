@@ -64,7 +64,6 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 	signInURLReq.Header.Set("Accept-Encoding", "gzip")
 	signInURLReq.Header.Set("Connection", "keep-alive")
 
-
 	var signInResp *http.Response
 
 	start := time.Now()
@@ -164,7 +163,6 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 
 	req.Header.Set("Accept-Encoding", "gzip")
 	req.Header.Set("Connection", "keep-alive")
-
 
 	var response *http.Response
 
@@ -532,4 +530,19 @@ func CliSignIn(email, password, apiServer string) (session Session, err error) {
 	}
 
 	return session, err
+}
+
+func (s *Session) Valid() bool {
+	switch {
+	case s.Ak == "":
+		return false
+	case s.Mk == "":
+		return false
+	case s.Token == "":
+		return false
+	case s.Server == "":
+		return false
+	}
+
+	return true
 }
