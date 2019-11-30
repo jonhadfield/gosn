@@ -1,10 +1,10 @@
 package gosn
 
 import (
-	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -40,6 +40,9 @@ func stringInSlice(inStr string, inSlice []string, matchCase bool) bool {
 
 func getResponseBody(resp *http.Response, debug bool) (body []byte, err error) {
 	start := time.Now()
+	defer func() {
+		debugPrint(debug, fmt.Sprintf("getResponseBody | duration: %+v", time.Since(start)))
+	}()
 
 	var output io.ReadCloser
 
@@ -53,16 +56,9 @@ func getResponseBody(resp *http.Response, debug bool) (body []byte, err error) {
 		output = resp.Body
 	}
 
-	buf := new(bytes.Buffer)
-
-	_, err = buf.ReadFrom(output)
-	if err != nil {
-		return
-	}
-
-	body = buf.Bytes()
-	elapsed := time.Since(start)
-	debugPrint(debug, fmt.Sprintf("getResponseBody | process time: %+v", elapsed))
+	readTimeStart := time.Now()
+	body, err = ioutil.ReadAll(output)
+	debugPrint(debug, fmt.Sprintf("getResponseBody | read time: %+v", time.Since(readTimeStart)))
 
 	return
 }
