@@ -61,6 +61,9 @@ func createHTTPClient() *http.Client {
 
 func debugPrint(show bool, msg string) {
 	if show {
+		if len(msg) > maxDebugChars {
+			msg = msg[:maxDebugChars] + "..."
+		}
 		log.Println(libName, "|", msg)
 	}
 }
