@@ -205,6 +205,10 @@ func (ei EncryptedItems) DecryptAndParse(Mk, Ak string, debug bool) (o Items, er
 
 // GetItems retrieves items from the API using optional filters
 func GetItems(input GetItemsInput) (output GetItemsOutput, err error) {
+	giStart := time.Now()
+	defer func(){
+		debugPrint(input.Debug, fmt.Sprintf("GetItems | duration %v", time.Since(giStart)))
+	}()
 	if !input.Session.Valid() {
 		err = fmt.Errorf("session is invalid")
 		return
@@ -311,6 +315,10 @@ func (i *Items) Encrypt(Mk, Ak string, debug bool) (e EncryptedItems, err error)
 
 // PutItems validates and then syncs items via API
 func PutItems(i PutItemsInput) (output PutItemsOutput, err error) {
+	piStart := time.Now()
+	defer func(){
+		debugPrint(i.Debug, fmt.Sprintf("PutItems | duration %v", time.Since(piStart)))
+	}()
 	if !i.Session.Valid() {
 		err = fmt.Errorf("session is invalid")
 		return
