@@ -23,8 +23,6 @@ const (
 	// LOGGING
 	libName             = "gosn" // name of library used in logging
 	maxDebugChars       = 120    // number of characters to display when logging API response body
-	funcNameOutputStart = "["    // prefix for outputting function name in log messages
-	funcNameOutputEnd   = "]"    // suffix for outputting function name in log messages
 
 	// HTTP
 	maxIdleConnections = 100 // HTTP transport limit
