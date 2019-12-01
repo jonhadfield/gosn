@@ -15,7 +15,7 @@ const (
 	signInPath       = "/auth/sign_in" // remote path for authenticating
 	syncPath         = "/items/sync"   // remote path for making sync calls
 	// PageSize is the maximum number of items to return with each call
-	PageSize            = 110
+	PageSize            = 300
 	timeLayout          = "2006-01-02T15:04:05.000Z"
 	defaultSNVersion    = "003"
 	defaultPasswordCost = 110000
