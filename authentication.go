@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	mathrand "math/rand"
 	"net/http"
 	"net/url"
@@ -61,13 +60,12 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 	}
 
 	signInURLReq.Header.Set("Content-Type", "application/json")
-	signInURLReq.Header.Set("Accept-Encoding", "gzip")
 	signInURLReq.Header.Set("Connection", "keep-alive")
 
 	var signInResp *http.Response
 
 	start := time.Now()
-	signInResp, err = client.Do(signInURLReq)
+	signInResp, err = httpClient.Do(signInURLReq)
 	elapsed := time.Since(start)
 
 	debugPrint(input.debug, fmt.Sprintf("requestToken | request took: %+v", elapsed))
@@ -144,8 +142,6 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 	// make initial params request without mfa token
 	var reqURL string
 
-	var body io.Reader
-
 	if input.tokenName == "" {
 		// initial request
 		reqURL = input.authParamsURL + "?email=" + input.email
@@ -156,13 +152,10 @@ func doAuthParamsRequest(input authParamsInput) (output doAuthRequestOutput, err
 
 	var req *http.Request
 
-	req, err = http.NewRequest(http.MethodGet, reqURL, body)
+	req, err = http.NewRequest(http.MethodGet, reqURL, nil)
 	if err != nil {
 		return
 	}
-
-	req.Header.Set("Accept-Encoding", "gzip")
-	req.Header.Set("Connection", "keep-alive")
 
 	var response *http.Response
 
@@ -438,7 +431,6 @@ func (input RegisterInput) Register() (token string, err error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept-Encoding", "gzip")
 	req.Header.Set("Connection", "keep-alive")
 
 	req.Host = input.APIServer

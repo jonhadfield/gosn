@@ -21,8 +21,8 @@ const (
 	defaultPasswordCost = 110000
 
 	// LOGGING
-	libName             = "gosn" // name of library used in logging
-	maxDebugChars       = 120    // number of characters to display when logging API response body
+	libName       = "gosn" // name of library used in logging
+	maxDebugChars = 120    // number of characters to display when logging API response body
 
 	// HTTP
 	maxIdleConnections = 100 // HTTP transport limit
@@ -41,20 +41,18 @@ func init() {
 
 // createHTTPClient for connection re-use
 func createHTTPClient() *http.Client {
-	client := &http.Client{
+	return &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConnsPerHost: maxIdleConnections,
 			DisableKeepAlives:   false,
+			DisableCompression:  false,
 			DialContext: (&net.Dialer{
 				Timeout:   connectionTimeout * time.Second,
 				KeepAlive: keepAliveTimeout * time.Second,
 			}).DialContext,
 		},
-
 		Timeout: time.Duration(requestTimeout) * time.Second,
 	}
-
-	return client
 }
 
 func debugPrint(show bool, msg string) {
@@ -62,6 +60,7 @@ func debugPrint(show bool, msg string) {
 		if len(msg) > maxDebugChars {
 			msg = msg[:maxDebugChars] + "..."
 		}
+
 		log.Println(libName, "|", msg)
 	}
 }

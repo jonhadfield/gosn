@@ -1,9 +1,7 @@
 package gosn
 
 import (
-	"compress/gzip"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -40,25 +38,14 @@ func stringInSlice(inStr string, inSlice []string, matchCase bool) bool {
 
 func getResponseBody(resp *http.Response, debug bool) (body []byte, err error) {
 	start := time.Now()
+
 	defer func() {
 		debugPrint(debug, fmt.Sprintf("getResponseBody | duration: %+v", time.Since(start)))
 	}()
 
-	var output io.ReadCloser
-
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		output, err = gzip.NewReader(resp.Body)
-		if err != nil {
-			return
-		}
-	default:
-		output = resp.Body
-	}
-
 	readTimeStart := time.Now()
-	body, err = ioutil.ReadAll(output)
-	debugPrint(debug, fmt.Sprintf("getResponseBody | read time: %+v", time.Since(readTimeStart)))
+	body, err = ioutil.ReadAll(resp.Body)
+	debugPrint(debug, fmt.Sprintf("getResponseBody | read %d bytes in %+v", len(body), time.Since(readTimeStart)))
 
 	return
 }
