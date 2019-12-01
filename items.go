@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"reflect"
@@ -643,7 +644,7 @@ func makeSyncRequest(session Session, reqBody []byte, debug bool) (responseBody 
 		debugPrint(debug, fmt.Sprintf("makeSyncRequest | sync of %d req bytes succeeded with: %s", len(reqBody), response.Status))
 	}
 
-	responseBody, err = getResponseBody(response, debug)
+	responseBody, err = ioutil.ReadAll(response.Body)
 	if err != nil {
 		return
 	}

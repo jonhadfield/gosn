@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	mathrand "math/rand"
 	"net/http"
 	"net/url"
@@ -82,7 +83,8 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 
 	var signInRespBody []byte
 
-	signInRespBody, err = getResponseBody(signInResp, input.debug)
+	signInRespBody, err = ioutil.ReadAll(signInResp.Body)
+
 	if err != nil {
 		return
 	}
@@ -102,7 +104,7 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 
 func processDoAuthRequestResponse(response *http.Response, debug bool) (output doAuthRequestOutput, errResp errorResponse, err error) {
 	var body []byte
-	body, err = getResponseBody(response, debug)
+	body, err = ioutil.ReadAll(response.Body)
 
 	switch response.StatusCode {
 	case 200:
@@ -372,7 +374,7 @@ type RegisterInput struct {
 func processDoRegisterRequestResponse(response *http.Response, debug bool) (token string, err error) {
 	var body []byte
 
-	body, err = getResponseBody(response, debug)
+	body, err = ioutil.ReadAll(response.Body)
 	if err != nil {
 		return
 	}

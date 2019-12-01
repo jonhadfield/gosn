@@ -1,11 +1,7 @@
 package gosn
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -34,18 +30,4 @@ func stringInSlice(inStr string, inSlice []string, matchCase bool) bool {
 	}
 
 	return false
-}
-
-func getResponseBody(resp *http.Response, debug bool) (body []byte, err error) {
-	start := time.Now()
-
-	defer func() {
-		debugPrint(debug, fmt.Sprintf("getResponseBody | duration: %+v", time.Since(start)))
-	}()
-
-	readTimeStart := time.Now()
-	body, err = ioutil.ReadAll(resp.Body)
-	debugPrint(debug, fmt.Sprintf("getResponseBody | read %d bytes in %+v", len(body), time.Since(readTimeStart)))
-
-	return
 }
