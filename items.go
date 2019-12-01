@@ -644,7 +644,10 @@ func makeSyncRequest(session Session, reqBody []byte, debug bool) (responseBody 
 		debugPrint(debug, fmt.Sprintf("makeSyncRequest | sync of %d req bytes succeeded with: %s", len(reqBody), response.Status))
 	}
 
+	readStart := time.Now()
 	responseBody, err = ioutil.ReadAll(response.Body)
+	debugPrint(debug, fmt.Sprintf("makeSyncRequest | response read took %+v", time.Since(readStart)))
+
 	if err != nil {
 		return
 	}

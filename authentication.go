@@ -83,7 +83,10 @@ func requestToken(client *http.Client, input signInInput) (signInSuccess signInR
 
 	var signInRespBody []byte
 
+	readStart := time.Now()
 	signInRespBody, err = ioutil.ReadAll(signInResp.Body)
+	debugPrint(input.debug, fmt.Sprintf("requestToken | response read took %+v", time.Since(readStart)))
+
 
 	if err != nil {
 		return
