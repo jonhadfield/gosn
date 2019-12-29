@@ -34,14 +34,18 @@ func (i *Items) Filter(f ItemFilters) {
 		case "Note":
 			if found := applyNoteFilters(item, f, tags); found {
 				filtered = append(filtered, item)
+
 			}
 		case "Tag":
 			if found := applyTagFilters(item, f); found {
 				filtered = append(filtered, item)
 			}
+		case "SN|Component":
+			if found := applyComponentFilters(item, f); found {
+				filtered = append(filtered, item)
+			}
 		}
 	}
-
 	*i = filtered
 }
 
@@ -392,7 +396,7 @@ func applyNoteTitleFilter(f Filter, i Item, matchAny bool) (result, matchedAll, 
 func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 	var matchedAll bool
 
-	for i, filter := range itemFilters.Filters {
+	for _, filter := range itemFilters.Filters {
 		if filter.Type != "Tag" {
 			continue
 		}
@@ -471,10 +475,112 @@ func applyTagFilters(item Item, itemFilters ItemFilters) bool {
 		default:
 			matchedAll = true // if no criteria specified then filter applies to type only, so true
 		}
-		// if last filter and matchedAll is true, then return true
-		if matchedAll && i == len(itemFilters.Filters)-1 {
-			return true
+	}
+
+	return matchedAll
+}
+
+func applyComponentFilters(item Item, itemFilters ItemFilters) bool {
+	var matchedAll bool
+
+	for _, filter := range itemFilters.Filters {
+		if filter.Type != "SN|Component" {
+			continue
 		}
+
+		switch strings.ToLower(filter.Key) {
+		case "name":
+			if item.Content == nil {
+				matchedAll = false
+			} else {
+				switch filter.Comparison {
+				case "~":
+					r := regexp.MustCompile(filter.Value)
+					if r.MatchString(item.Content.GetName()) {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				case "==":
+					if item.Content.GetName() == filter.Value {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				case "!=":
+					if item.Content.GetName() != filter.Value {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				case "contains":
+					if strings.Contains(item.Content.GetName(), filter.Value) {
+						if itemFilters.MatchAny {
+							return true
+						}
+						matchedAll = true
+					} else {
+						if !itemFilters.MatchAny {
+							return false
+						}
+						matchedAll = false
+					}
+				}
+			}
+		case "uuid":
+			if item.UUID == filter.Value {
+				if itemFilters.MatchAny {
+					return true
+				}
+
+				matchedAll = true
+			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
+
+				matchedAll = false
+			}
+		case "active":
+			filterActive, _ := strconv.ParseBool(filter.Value)
+			if item.Content.GetActive() == filterActive {
+				if itemFilters.MatchAny {
+					return true
+				}
+
+				matchedAll = true
+			} else {
+				if !itemFilters.MatchAny {
+					return false
+				}
+
+				matchedAll = false
+			}
+		default:
+			matchedAll = true // if no criteria specified then filter applies to type only, so true
+		}
+	}
+
+	if matchedAll {
+		return true
 	}
 
 	return false

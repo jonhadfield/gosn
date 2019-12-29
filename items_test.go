@@ -127,15 +127,18 @@ func _createTags(session Session, input []string) (output PutItemsOutput, err er
 	return
 }
 
-func _deleteAllTagsAndNotes(session *Session) (err error) {
+func _deleteAllTagsNotesComponents(session *Session) (err error) {
 	gnf := Filter{
 		Type: "Note",
 	}
 	gtf := Filter{
 		Type: "Tag",
 	}
+	gcf := Filter{
+		Type: "SN|Component",
+	}
 	f := ItemFilters{
-		Filters:  []Filter{gnf, gtf},
+		Filters:  []Filter{gnf, gtf, gcf},
 		MatchAny: true,
 	}
 	gii := GetItemsInput{
@@ -162,7 +165,6 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 	if err != nil {
 		return
 	}
-
 	items.Filter(f)
 
 	var toDel Items
@@ -174,6 +176,8 @@ func _deleteAllTagsAndNotes(session *Session) (err error) {
 			md.Content = NewNoteContent()
 		case "Tag":
 			md.Content = NewTagContent()
+		case "SN|Component":
+			md.Content = NewComponentContent()
 		}
 
 		md.Deleted = true
@@ -254,9 +258,100 @@ func createTag(title, uuid string) *Item {
 }
 
 func cleanup(session *Session) {
-	if err := _deleteAllTagsAndNotes(session); err != nil {
+	if err := _deleteAllTagsNotesComponents(session); err != nil {
 		panic(err)
 	}
+}
+
+func TestPutItemsAddSingleComponent(t *testing.T) {
+	sOutput, err := SignIn(sInput)
+	assert.NoError(t, err, "sign-in failed", err)
+
+	defer cleanup(&sOutput.Session)
+
+	newComponentContent := ComponentContent{
+		Name:               "Minimal Markdown Editor",
+		Area:               "editor-editor",
+		LocalURL:           "sn://Extensions/org.standardnotes.plus-editor/index.html",
+		HostedURL:          "https://extensions.standardnotes.org/e6d4d59ac829ed7ec24e2c139e7d8b21b625dff2d7f98bb7b907291242d31fcd/components/plus-editor",
+		OfflineOnly:        "",
+		ValidUntil:         "2023-08-29T12:15:17.000Z",
+		AutoUpdateDisabled: "",
+		DissociatedItemIds: []string{"e9d4daf5-52e6-4d67-975e-a1620bf5217c"},
+		AssociatedItemIds:  []string{"d7d1dee3-42f6-3d27-871e-d2320bf3214a"},
+		ItemReferences:     nil,
+		Active:             true,
+		AppData:            AppDataContent{},
+	}
+
+	newComponentContent.SetUpdateTime(time.Now())
+
+	newComponent := NewComponent()
+	newComponent.Content = &newComponentContent
+
+	newComponent.Content.DisassociateItems([]string{"d7d1dee3-42f6-3d27-871e-d2320bf3214a"})
+	assert.NotContains(t, newComponent.Content.GetItemAssociations(), "d7d1dee3-42f6-3d27-871e-d2320bf3214a")
+
+	newComponent.Content.AssociateItems([]string{"d7d1dee3-42f6-3d27-871e-d2320bf3214a"})
+	assert.Contains(t, newComponent.Content.GetItemAssociations(), "d7d1dee3-42f6-3d27-871e-d2320bf3214a")
+
+	dItems := Items{*newComponent}
+	assert.NoError(t, dItems.Validate())
+	eItems, _ := dItems.Encrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
+	putItemsInput := PutItemsInput{
+		Items:   eItems,
+		Session: sOutput.Session,
+	}
+
+	var putItemsOutput PutItemsOutput
+
+	putItemsOutput, err = PutItems(putItemsInput)
+	assert.NoError(t, err, "PutItems Failed", err)
+	assert.Len(t, putItemsOutput.ResponseBody.SavedItems, 1, "expected 1")
+	uuidOfNewItem := putItemsOutput.ResponseBody.SavedItems[0].UUID
+	getItemsInput := GetItemsInput{
+		Session: sOutput.Session,
+	}
+
+	var gio GetItemsOutput
+
+	gio, err = GetItems(getItemsInput)
+	if err != nil {
+		return
+	}
+
+	var di DecryptedItems
+
+	di, err = gio.Items.Decrypt(sOutput.Session.Mk, sOutput.Session.Ak, true)
+	if err != nil {
+		return
+	}
+
+	var items Items
+	items, err = di.Parse()
+	assert.NoError(t, err, "failed to get items")
+
+	var foundCreatedItem bool
+
+	for i := range items {
+		if items[i].UUID == uuidOfNewItem {
+			foundCreatedItem = true
+
+			assert.Equal(t, "SN|Component", items[i].ContentType)
+			assert.Equal(t, false, items[i].Deleted)
+			assert.Equal(t, "Minimal Markdown Editor", items[i].Content.GetName())
+			assert.Contains(t, items[i].Content.GetItemAssociations(),
+				"d7d1dee3-42f6-3d27-871e-d2320bf3214a")
+			assert.NotContains(t, items[i].Content.GetItemAssociations(),
+				"lemon")
+			assert.Contains(t, items[i].Content.GetItemDisassociations(),
+				"e9d4daf5-52e6-4d67-975e-a1620bf5217c")
+			assert.True(t, items[i].Content.GetActive())
+		}
+	}
+
+	assert.True(t, foundCreatedItem, "failed to get created Item by UUID")
+
 }
 
 func TestItemsRemoveDeleted(t *testing.T) {
@@ -875,8 +970,8 @@ func TestSearchNotesByRegexTitleFilter(t *testing.T) {
 }
 
 func TestSearchTagsByText(t *testing.T) {
-	//SetDebugLogger(log.Println)
 	sOutput, err := SignIn(sInput)
+	cleanup(&sOutput.Session)
 	assert.NoError(t, err, "sign-in failed", err)
 
 	defer cleanup(&sOutput.Session)
@@ -920,7 +1015,7 @@ func TestSearchTagsByRegex(t *testing.T) {
 	sOutput, err := SignIn(sInput)
 	assert.NoError(t, err, "sign-in failed", err)
 
-	defer cleanup(&sOutput.Session)
+	cleanup(&sOutput.Session)
 
 	tagInput := []string{"Rod, Jane", "Zippy, Bungle"}
 	if _, err = _createTags(sOutput.Session, tagInput); err != nil {
@@ -1107,7 +1202,6 @@ func TestCreateAndGet301Notes(t *testing.T) {
 
 	for i, r := range retrievedNotes {
 		if !strings.HasPrefix(r.Content.GetTitle(), fmt.Sprintf("-%d-", i+1)) {
-			fmt.Println("expected:", i+1, "got", r.Content.GetTitle())
 			t.Errorf("incorrect note returned")
 		}
 	}

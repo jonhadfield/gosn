@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	try "gopkg.in/matryer/try.v1"
+	"gopkg.in/matryer/try.v1"
 )
 
 // Item describes a decrypted item
@@ -54,6 +54,14 @@ func NewTag() *Item {
 	return item
 }
 
+// NewComponent returns an Item of type Component without content
+func NewComponent() *Item {
+	item := newItem()
+	item.ContentType = "SN|Component"
+
+	return item
+}
+
 // NewNoteContent returns an empty Note content instance
 func NewNoteContent() *NoteContent {
 	c := &NoteContent{}
@@ -70,6 +78,39 @@ func NewTagContent() *TagContent {
 	return c
 }
 
+// NewTagContent returns an empty Tag content instance
+func NewComponentContent() *ComponentContent {
+	c := &ComponentContent{}
+	c.SetUpdateTime(time.Now().UTC())
+
+	return c
+}
+
+// ClientStructure defines behaviour of a Component Item's content entry
+type ComponentClientStructure interface {
+	// return name
+	GetName() string
+	// return active status
+	GetActive() bool
+	// get item associations
+	GetItemAssociations() []string
+	// get item disassociations
+	GetItemDisassociations() []string
+	// associate items
+	AssociateItems(items []string)
+	// disassociate items
+	DisassociateItems(items []string)
+}
+
+// ClientStructure defines behaviour of a Component Item's content entry
+type NoteClientStructure interface {
+	// set text
+	SetText(input string)
+	// return text
+	GetText() string
+	// get last update time
+}
+
 // ClientStructure defines behaviour of an Item's content entry
 type ClientStructure interface {
 	References() ItemReferences
@@ -81,10 +122,6 @@ type ClientStructure interface {
 	GetTitle() string
 	// set title
 	SetTitle(input string)
-	// set text
-	SetText(input string)
-	// return text
-	GetText() string
 	// get last update time
 	GetUpdateTime() (time.Time, error)
 	// set last update time
@@ -93,6 +130,10 @@ type ClientStructure interface {
 	GetAppData() AppDataContent
 	// set appdata
 	SetAppData(data AppDataContent)
+	// client structure methods for Note
+	NoteClientStructure
+	// client structure methods for Component
+	ComponentClientStructure
 }
 
 type syncResponse struct {
@@ -151,7 +192,7 @@ func resizeForRetry(in *GetItemsInput) {
 type EncryptedItems []EncryptedItem
 
 func (ei EncryptedItems) Decrypt(Mk, Ak string, debug bool) (o DecryptedItems, err error) {
-	debugPrint(debug, fmt.Sprintf("Decrypt | encrypted %d items", len(ei)))
+	debugPrint(debug, fmt.Sprintf("Decrypt | decrypting %d items", len(ei)))
 
 	for _, eItem := range ei {
 		var item DecryptedItem
@@ -484,51 +525,6 @@ type DecryptedItem struct {
 
 type DecryptedItems []DecryptedItem
 
-// {
-//      "uuid": "3162fe3a-1b5b-4cf5-b88a-afcb9996b23a",
-//      "content_type": "Note",
-//      "content": {
-//        "references": [
-//          {
-//            "uuid": "901751a0-0b85-4636-93a3-682c4779b634",
-//            "content_type": "Tag"
-//          }
-//        ],
-//        "title": "...",
-//        "text": "..."
-//      },
-//      "created_at": "2016-12-16T17:37:50.000Z"
-//    },
-//
-//    {
-//      "uuid": "023112fe-9066-481e-8a63-f15f27d3f904",
-//      "content_type": "Tag",
-//      "content": {
-//        "references": [
-//          {
-//            "uuid": "94cba6b7-6b55-41d6-89a5-e3db8be9fbbf",
-//            "content_type": "Note"
-//          }
-//        ],
-//        "title": "essays"
-//      },
-//      "created_at": "2016-12-16T17:13:20.000Z"
-//    }
-
-//func (item EncryptedItem) Export() (string, error) {
-//	var sb strings.Builder
-//	sb.WriteString(fmt.Sprintf("\"uuid\": \"%s\",", item.UUID))
-//	sb.WriteString(fmt.Sprintf("\"content_type\": \"%s\",", item.ContentType))
-//	content, err := json.Marshal(item.Content)
-//	sb.WriteString(fmt.Sprintf("\"content_type\": \"%s\",", json.Marshal(item.Content)))
-//	switch item.ContentType {
-//	case "Note":
-//
-//
-//	}
-//	return input.Content != nil
-//}
-
 type UpdateItemRefsInput struct {
 	Items Items // Tags
 	ToRef Items // Items To Reference
@@ -821,7 +817,16 @@ func (tagContent *TagContent) GetText() string {
 }
 
 func (tagContent *TagContent) SetText(text string) {
+	// not implemented
+}
 
+func (tagContent *TagContent) GetName() string {
+	return "not implemented"
+}
+
+func (tagContent *TagContent) GetActive() bool {
+	// not implemented
+	return false
 }
 
 func (tagContent *TagContent) TextContains(findString string, matchCase bool) bool {
@@ -859,10 +864,195 @@ func (noteContent *NoteContent) References() ItemReferences {
 	return append(output, noteContent.ItemReferences...)
 }
 
+func (noteContent *NoteContent) GetActive() bool {
+	// not implemented
+	return false
+}
+
+func (noteContent *NoteContent) GetName() string {
+	return "not implemented"
+}
+
+func (noteContent *NoteContent) AddItemAssociations() string {
+	return "not implemented"
+}
+
+func (tagContent *TagContent) GetItemAssociations() []string {
+	panic("not implemented")
+}
+
+func (tagContent *TagContent) GetItemDisassociations() []string {
+	panic("not implemented")
+}
+
+func (noteContent *NoteContent) GetItemAssociations() []string {
+	panic("not implemented")
+}
+
+func (noteContent *NoteContent) GetItemDisassociations() []string {
+	panic("not implemented")
+}
+
+func (cc *ComponentContent) GetItemAssociations() []string {
+	return cc.AssociatedItemIds
+}
+
+func (cc *ComponentContent) GetItemDisassociations() []string {
+	return cc.DissociatedItemIds
+}
+
 type TagContent struct {
 	Title          string         `json:"title"`
 	ItemReferences ItemReferences `json:"references"`
 	AppData        AppDataContent `json:"appData"`
+}
+
+type ComponentContent struct {
+	LegacyURL          string         `json:"legacy_url"`
+	HostedURL          string         `json:"hosted_url"`
+	LocalURL           string         `json:"local_url"`
+	ValidUntil         string         `json:"valid_until"`
+	OfflineOnly        string         `json:"offlineOnly"`
+	Name               string         `json:"name"`
+	Area               string         `json:"area"`
+	PackageInfo        interface{}    `json:"package_info"`
+	Permissions        interface{}    `json:"permissions"`
+	Active             interface{}    `json:"active"`
+	AutoUpdateDisabled string         `json:"autoupdateDisabled"`
+	ComponentData      interface{}    `json:"componentData"`
+	DissociatedItemIds []string       `json:"disassociatedItemIds"`
+	AssociatedItemIds  []string       `json:"associatedItemIds"`
+	ItemReferences     ItemReferences `json:"references"`
+	AppData            AppDataContent `json:"appData"`
+}
+
+func (cc *ComponentContent) UpsertReferences(input ItemReferences) {
+	panic("implement me")
+}
+
+func (cc *ComponentContent) SetReferences(input ItemReferences) {
+	panic("implement me")
+}
+
+func (noteContent *NoteContent) AssociateItems(newItems []string) {
+
+}
+
+func (tagContent *TagContent) AssociateItems(newItems []string) {
+
+}
+
+func (noteContent *NoteContent) DisassociateItems(newItems []string) {
+
+}
+
+func (tagContent *TagContent) DisassociateItems(newItems []string) {
+
+}
+
+func (cc *ComponentContent) AssociateItems(newItems []string) {
+	// add to associated item ids
+	for _, newRef := range newItems {
+		var existingFound bool
+		var existingDFound bool
+
+		for _, existingRef := range cc.AssociatedItemIds {
+			if existingRef == newRef {
+				existingFound = true
+			}
+		}
+
+		for _, existingDRef := range cc.DissociatedItemIds {
+			if existingDRef == newRef {
+				existingDFound = true
+			}
+		}
+
+		// add reference if it doesn't exist
+		if !existingFound {
+			cc.AssociatedItemIds = append(cc.AssociatedItemIds, newRef)
+		}
+
+		// remove reference (from disassociated) if it does exist in that list
+		if existingDFound {
+			cc.DissociatedItemIds = removeStringFromSlice(newRef, cc.DissociatedItemIds)
+		}
+	}
+}
+
+func removeStringFromSlice(inSt string, inSl []string) (outSl []string) {
+	for _, si := range inSl {
+		if inSt != si {
+			outSl = append(outSl, si)
+		}
+	}
+	return
+}
+
+func (cc *ComponentContent) DisassociateItems(itemsToRemove []string) {
+	// remove from associated item ids
+	for _, delRef := range itemsToRemove {
+		var existingFound bool
+
+		for _, existingRef := range cc.AssociatedItemIds {
+			if existingRef == delRef {
+				existingFound = true
+			}
+		}
+
+		// remove reference (from disassociated) if it does exist in that list
+		if existingFound {
+			cc.AssociatedItemIds = removeStringFromSlice(delRef, cc.AssociatedItemIds)
+		}
+	}
+}
+
+func (cc *ComponentContent) SetText(input string) {
+	panic("implement me")
+}
+
+func (cc *ComponentContent) GetText() string {
+	return ""
+}
+
+func (cc *ComponentContent) GetUpdateTime() (time.Time, error) {
+	if cc.AppData.OrgStandardNotesSN.ClientUpdatedAt == "" {
+		return time.Time{}, fmt.Errorf("notset")
+	}
+
+	return time.Parse(timeLayout, cc.AppData.OrgStandardNotesSN.ClientUpdatedAt)
+}
+
+func (cc *ComponentContent) SetUpdateTime(uTime time.Time) {
+	cc.AppData.OrgStandardNotesSN.ClientUpdatedAt = uTime.Format(timeLayout)
+}
+
+func (cc *ComponentContent) GetTitle() string {
+	return ""
+}
+
+func (cc *ComponentContent) GetName() string {
+	return cc.Name
+}
+
+func (cc *ComponentContent) GetActive() bool {
+	return cc.Active.(bool)
+}
+
+func (cc *ComponentContent) SetTitle(title string) {
+}
+
+func (cc *ComponentContent) GetAppData() AppDataContent {
+	return cc.AppData
+}
+
+func (cc *ComponentContent) SetAppData(data AppDataContent) {
+	cc.AppData = data
+}
+
+func (cc *ComponentContent) References() ItemReferences {
+	var output ItemReferences
+	return append(output, cc.ItemReferences...)
 }
 
 type ItemReferences []ItemReference
@@ -901,12 +1091,16 @@ func (di *DecryptedItems) Parse() (p Items, err error) {
 		processedItem.UUID = i.UUID
 
 		if processedItem.Content != nil {
-			if processedItem.Content.GetTitle() != "" {
-				processedItem.ContentSize += len(processedItem.Content.GetTitle())
-			}
+			switch {
+			// Parse content for Notes and Tags
+			case stringInSlice(processedItem.ContentType, []string{"Note", "Tag"}, true):
+				if processedItem.Content.GetTitle() != "" {
+					processedItem.ContentSize += len(processedItem.Content.GetTitle())
+				}
 
-			if processedItem.Content.GetText() != "" {
-				processedItem.ContentSize += len(processedItem.Content.GetText())
+				if processedItem.Content.GetText() != "" {
+					processedItem.ContentSize += len(processedItem.Content.GetText())
+				}
 			}
 		}
 
@@ -930,6 +1124,10 @@ func processContentModel(contentType, input string) (output ClientStructure, err
 		err = json.Unmarshal([]byte(input), &tagContent)
 
 		return &tagContent, err
+	case "SN|Component":
+		var componentContent ComponentContent
+		err = json.Unmarshal([]byte(input), &componentContent)
+		return &componentContent, err
 	}
 
 	return
